@@ -1,3 +1,15 @@
+# OGRS 3 - Calculator
+# by Merten Neumann
+#
+# based on
+#
+# Breiling, L., Dahle, K.-P., Oberlader, V. & Rettenberger, M. (2022). 
+#   Die deutsche Version der Offender Group Reconviction Scale, Version 3 (OGRS 3) 
+#   (Berichte und Materialien (BM-Online), Bd. 30). Wiesbaden: Kriminologische Zentralstelle.
+#
+# Howard, P., Francis, B., Soothill, K. & Humphreys, L. (2009). 
+#   OGRS 3: The revised offender group reconviction scale. London: Ministry of Justice.
+
 ogrs <- function(Data = NA, Item1 = c("m", "f"), 
                  Item2 = NA, Item3 = NA, Item4 = NA, 
                  Item5 = NA, Item6 = c("Violence", "Robbery", "Public_order", "Sexual_no_child",
