@@ -30,7 +30,7 @@ ogrs <- function(Data = NA, Item1 = c("m", "f"),
                                               "Drug_possession_supply", "Other")) {
     
     #Package
-    require(tidyverse)
+    require(dplyr)
     
     #Compute Copas Rate
     Copas_rate <- log((1 + Item4)/(10 + (Item2 - Item5)))
