@@ -3,7 +3,7 @@
 # Model: Howard, Francis, Soothill & Humphreys (2009), appendix.
 # German coding: Breiling, Dahle, Oberlader & Rettenberger (2022), chapter 5.
 
-OGRS_APP_VERSION <- "2.1.0"
+OGRS_APP_VERSION <- "2.1.1"
 OGRS_MODEL_VERSION <- "OGRS 3 / German coding 2022 / model 2009"
 OGRS_MANUAL_URL <- "https://krimpub.krimz.de/files/223/bm-online30.pdf"
 

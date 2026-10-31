@@ -1,5 +1,20 @@
 # Change history
 
+## 2.1.1 · Unreleased · 31 October 2026
+
+- Restore the original grey/white palette and blue accents, with grey histogram
+  bars and a red density line. Add space between the brand subtitle and tabs.
+- Keep the explicit violent/sexual reoffending limitation in Methods; other
+  views refer to general reoffending without repeating that warning.
+- Show CSV encoding, separator, decimal mark and probability guidance beside
+  single-case and dataset downloads.
+- Include UTC calculation timestamps in result filenames and download timestamps
+  in example filenames. Language changes preserve result filenames and contents.
+- Translate Explore as “Ausprobieren”. Separate Methods from About the app,
+  with factual headings, calculation details, contact and data-processing notes.
+- Restore the VRAG-R calculator link and invite feature requests and suggestions
+  for additions through GitHub Issues.
+
 ## 2.1.0 · Unreleased · 31 October 2026
 
 ### Language

@@ -66,6 +66,17 @@ test_that("export retains invalid rows and preserves their identity", {
   expect_true(same_batch_spec(saved,saved));expect_false(same_batch_spec(saved,list(file="b",mapping="m")))
 })
 
+test_that("download filenames match the calculation's UTC metadata", {
+  withr::local_envvar(TZ = "Pacific/Auckland")
+  timestamp <- as.POSIXct("2026-10-31 15:30:45", tz = "Europe/Berlin")
+  data <- valid_case()
+  export <- make_ogrs_export(data, ogrs(Data = data), validate_ogrs(data), timestamp = timestamp)
+  expect_identical(export$Calculated_at_UTC, "2026-10-31T14:30:45Z")
+  expect_identical(ogrs_export_filename("Single_case", timestamp), "OGRS3_Single_case_2026-10-31_14-30-45_UTC.csv")
+  expect_identical(ogrs_export_filename("Results", timestamp), "OGRS3_Results_2026-10-31_14-30-45_UTC.csv")
+  expect_identical(ogrs_export_filename("Example_data", timestamp), "OGRS3_Example_data_2026-10-31_14-30-45_UTC.csv")
+})
+
 test_that("Explore excludes invalid combinations and handles empty selections", {
   values <- list(Item2=20,Item3=20,Item4=0,Item5=20)
   expect_error(make_explore_data("Item4",c(0,10),character(),"Violence",values),"sex")

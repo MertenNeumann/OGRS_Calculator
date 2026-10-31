@@ -111,6 +111,11 @@ make_ogrs_export <- function(data, scores, issues, ids = NULL,
 
 same_batch_spec <- function(saved, current) !is.null(saved) && identical(saved, current)
 
+# Use the calculation time for result filenames, matching Calculated_at_UTC.
+ogrs_export_filename <- function(label, timestamp) {
+  paste0("OGRS3_", label, "_", format(timestamp, "%Y-%m-%d_%H-%M-%S_UTC", tz = "UTC"), ".csv")
+}
+
 make_explore_data <- function(axis, range, sexes, offences, values) {
   if (!axis %in% c("Item2", "Item3", "Item4", "Item5")) stop("Please select a valid axis.", call. = FALSE)
   if (!length(sexes) || !all(sexes %in% c("m", "f"))) stop("Please select at least one sex.", call. = FALSE)

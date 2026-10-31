@@ -6,6 +6,7 @@ import socket
 import subprocess
 import tempfile
 import time
+from datetime import datetime
 from pathlib import Path
 from urllib.request import ProxyHandler, build_opener
 
@@ -23,9 +24,37 @@ def run_browser(url, directory):
         page = browser.new_page(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
         page.on("pageerror", lambda exc: errors.append(str(exc)))
         page.goto(url, wait_until="networkidle")
+
+        export_names = {}
+
+        def download(name, control="batch_download", label="Results"):
+            with page.expect_download() as info:
+                page.locator(f"#{control}").click()
+            suggested = info.value.suggested_filename
+            assert re.fullmatch(rf"OGRS3_{label}_\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_UTC\.csv", suggested), suggested
+            destination = directory / name
+            info.value.save_as(destination)
+            export_names[name] = suggested
+            if control != "example_download":
+                with destination.open(encoding="utf-8-sig", newline="") as file:
+                    row = next(csv.DictReader(file))
+                calculated = datetime.strptime(row["Calculated_at_UTC"], "%Y-%m-%dT%H:%M:%SZ")
+                assert suggested == f"OGRS3_{label}_{calculated:%Y-%m-%d_%H-%M-%S}_UTC.csv"
+            return destination
+
+        def check_brand_spacing():
+            brand = page.locator(".navbar-brand").bounding_box()
+            first_tab = page.locator('a[data-value="single"]').bounding_box()
+            assert first_tab["x"] - (brand["x"] + brand["width"]) >= 24
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
+
         expect(page.locator("html")).to_have_attribute("lang", "en")
         expect(page.locator("#language")).to_have_value("en")
         expect(page.get_by_role("heading", name="Estimate the risk of general reoffending.")).to_be_visible()
+        expect(page.locator('a[data-value="methods"]')).to_have_text("Methods")
+        expect(page.locator('a[data-value="about"]')).to_have_text("About the app")
+        expect(page.locator(".tab-pane.active")).not_to_contain_text("specific prediction of violent or sexual")
+        check_brand_spacing()
         expect(page.locator("#prob_one")).to_have_count(0)
         page.locator("#single_example").click()
         expect(page.locator("#example_notice")).to_contain_text("Example loaded")
@@ -33,6 +62,13 @@ def run_browser(url, directory):
         expect(page.locator("#prob_one")).to_have_text("12.2 %")
         expect(page.locator("#prob_two")).to_have_text("22.1 %")
         expect(page.locator("#copas_value")).to_have_text("-2.303")
+        expect(page.locator("#single_results .csv-export-note")).to_be_visible()
+        expect(page.locator("#single_results .csv-export-note")).to_contain_text("UTF-8, commas as field separators and a decimal point")
+        single_english = download("single-en.csv", "single_download", "Single_case").read_bytes()
+        with (directory / "single-en.csv").open(encoding="utf-8-sig", newline="") as file:
+            single_row = next(csv.DictReader(file))
+        assert single_row["Item1"] == "m"
+        assert abs(float(single_row["Prob_one_year"]) - .12161553504714573) < 1e-12
         page.screenshot(path=str(directory / "single-case-english.png"), full_page=True)
 
         def select(id_, value):
@@ -55,6 +91,13 @@ def run_browser(url, directory):
         expect(page.locator('label[for="single_age_last"]')).to_have_text("Item 2 · Alter bei der letzten Verurteilung")
         expect(page.locator("#single_sex + .selectize-control")).to_contain_text("Männlich")
         expect(page.locator("#single_download")).to_be_visible()
+        expect(page.locator("#single_results .csv-export-note")).to_contain_text("UTF-8, Kommas als Trennzeichen und einen Dezimalpunkt")
+        assert download("single-de.csv", "single_download", "Single_case").read_bytes() == single_english
+        assert export_names["single-en.csv"] == export_names["single-de.csv"]
+        expect(page.locator('a[data-value="explore"]')).to_have_text("Ausprobieren")
+        expect(page.locator('a[data-value="methods"]')).to_have_text("Methodische Hinweise")
+        expect(page.locator('a[data-value="about"]')).to_have_text("Über die App")
+        check_brand_spacing()
         page.screenshot(path=str(directory / "single-case-german.png"), full_page=True)
         language("en")
         expect(page.locator("#prob_one")).to_have_text("12.2 %")
@@ -67,7 +110,7 @@ def run_browser(url, directory):
         expect(page.locator("#single_validation")).to_contain_text("nicht negativ")
         expect(page.locator("#single_download")).to_have_count(0)
         language("en")
-        print("PASS: English default; bilingual single-case results and validation without input loss", flush=True)
+        print("PASS: bilingual single-case results, CSV guidance, timestamped downloads and validation", flush=True)
 
         page.locator('a[data-value="batch"]').click()
         page.locator("#batch_file").set_input_files(ROOT / "examples/example-data.csv")
@@ -79,13 +122,6 @@ def run_browser(url, directory):
         expect(page.locator("#batch_status")).to_contain_text("example-data.csv")
         expect(page.locator("#batch_plot img")).to_be_visible(timeout=30000)
 
-        def download(name):
-            with page.expect_download() as info:
-                page.locator("#batch_download").click()
-            destination = directory / name
-            info.value.save_as(destination)
-            return destination
-
         exported = download("export.csv")
         with exported.open(encoding="utf-8-sig", newline="") as file:
             rows = list(csv.DictReader(file))
@@ -93,7 +129,10 @@ def run_browser(url, directory):
         assert rows[0]["Case_ID"] == "Example_01"
         assert rows[0]["Status"] == "calculated"
         assert abs(float(rows[0]["Prob_one_year"]) - .12161553504714573) < 1e-12
-        print("PASS: real upload, mapping, plot and English export schema", flush=True)
+        example = download("example.csv", "example_download", "Example_data")
+        assert example.read_bytes() == (ROOT / "examples/example-data.csv").read_bytes()
+        expect(page.locator(".tab-pane.active .csv-export-note")).to_contain_text("Invalid rows include a status")
+        print("PASS: upload, mapping, plot, export schema and timestamped result/example downloads", flush=True)
 
         # Deliberately override a suggested mapping before switching languages.
         mapping_label = page.locator("#category_mapping label").filter(has_text=re.compile(r"^\s*Value:\s*Violence\s*$"))
@@ -111,6 +150,8 @@ def run_browser(url, directory):
         expect(page.locator("#category_mapping [data-i18n-raw]").filter(has_text=re.compile("^Violence$"))).to_have_text("Violence")
         expect(page.locator("#batch_preview")).to_contain_text("Male")
         assert download("custom-de.csv").read_bytes() == before
+        assert export_names["custom-en.csv"] == export_names["custom-de.csv"]
+        expect(page.locator(".tab-pane.active .csv-export-note")).to_contain_text("Ungültige Zeilen enthalten Status")
         language("en")
         expect(page.locator(f"#{mapping_id} + .selectize-control")).to_contain_text("Robbery")
         expect(page.locator("#batch_download")).to_be_visible()
@@ -144,13 +185,40 @@ def run_browser(url, directory):
         page.locator('input[name="explore_sexes"][value="f"]').check()
         expect(page.locator("#explore_plot img")).to_be_visible(timeout=30000)
         page.locator('a[data-value="methods"]').click()
+        expect(page.get_by_role("heading", name="OGRS 3: instrument and calculation")).to_be_visible()
+        limitation = "No specific prediction of sexual or violent reoffending, or of the severity of a future offence."
+        expect(page.get_by_text(limitation, exact=True)).to_have_count(1)
+        expect(page.get_by_text(limitation, exact=True)).to_be_visible()
+        expect(page.locator(".tab-pane.active")).not_to_contain_text("Code and contact")
         page.locator("#offence_search").fill("§ 242 StGB")
         expect(page.locator("#offence_lookup")).to_contain_text("Theft")
         expect(page.locator("#offence_lookup")).to_contain_text("Diebstahl")
         language("de")
         expect(page.locator("#offence_lookup")).to_contain_text("Vorschrift")
+        expect(page.get_by_role("heading", name="OGRS 3: Instrument und Berechnung")).to_be_visible()
+        page.screenshot(path=str(directory / "methods-german.png"), full_page=True)
+        page.locator('a[data-value="about"]').click()
+        expect(page.get_by_role("heading", name="Über diese App")).to_be_visible()
+        expect(page.locator(".tab-pane.active")).to_contain_text("Erweiterungs- und Ergänzungsvorschläge")
+        expect(page.locator(".tab-pane.active")).not_to_contain_text("Keine spezifische Prognose")
+        expect(page.get_by_role("link", name="VRAG-R-Rechner", exact=True)).to_have_attribute("href", "https://mertenneumann.shinyapps.io/VRAGR_Calculator/")
+        expect(page.get_by_role("link", name="GitHub Issues", exact=True)).to_have_attribute("href", "https://github.com/MertenNeumann/OGRS_Calculator/issues")
+        expect(page.get_by_role("heading", name="Datenverarbeitung")).to_be_visible()
+        page.get_by_role("button", name="Hosting und temporäre Dateien").click()
+        expect(page.get_by_role("link", name="Sicherheitsinformationen von Posit")).to_be_visible()
+        page.screenshot(path=str(directory / "about-german.png"), full_page=True)
+        language("en")
+        expect(page.get_by_role("heading", name="About this app")).to_be_visible()
+        expect(page.locator(".tab-pane.active")).to_contain_text("feature requests and suggestions for additions")
+        expect(page.get_by_role("link", name="VRAG-R calculator", exact=True)).to_be_visible()
+        page.screenshot(path=str(directory / "about-english.png"), full_page=True)
+
+        for width in (1920, 1280, 1024, 768):
+            page.set_viewport_size({"width": width, "height": 1000})
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), width
+        page.set_viewport_size({"width": 1440, "height": 1000})
         assert page.locator(".shiny-output-error:not(.shiny-output-error-validation)").count() == 0
-        print("PASS: bilingual plots, accessibility text, empty selections and coding reference", flush=True)
+        print("PASS: plots, coding reference, separate bilingual Methods/About tabs and responsive layout", flush=True)
 
         mobile = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
         mobile.on("pageerror", lambda exc: errors.append(str(exc)))
@@ -168,6 +236,8 @@ def run_browser(url, directory):
         mobile.locator("#language").select_option("de")
         expect(mobile.locator("html")).to_have_attribute("lang", "de")
         expect(mobile.locator("#prob_one")).to_have_text("12,2 %")
+        expect(mobile.locator('a[data-value="explore"]')).to_have_text("Ausprobieren")
+        expect(mobile.locator('a[data-value="about"]')).to_be_visible()
         mobile.locator("button.navbar-toggle, button.navbar-toggler").click()
         expect(mobile.locator("#language")).not_to_be_visible()
         assert mobile.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")

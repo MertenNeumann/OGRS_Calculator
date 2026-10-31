@@ -62,8 +62,13 @@ and access-control configuration.
 - **Explore:** Compare whole-number ranges across up to five offence groups.
   Invalid combinations are excluded and counted. Choose the one-year estimate,
   two-year estimate or Copas rate.
-- **Method & guidance:** Interpretation, references, limitations, historical
-  statutory mappings, data processing and contact information.
+- **Methods:** Instrument, calculation, interpretation, references, limitations
+  and historical statutory mappings.
+- **About the app:** Source code, contact, feedback and feature requests, the
+  related VRAG-R calculator and data-processing information.
+
+In German, these tabs are labelled **Einzelfall**, **Datensatz**, **Ausprobieren**,
+**Methodische Hinweise** and **Über die App**.
 
 The language setting is local to each Shiny session. It translates headings,
 controls, choices, validation messages, result summaries, plot labels and
@@ -78,6 +83,13 @@ cumulatively, not just the second year. No arbitrary risk bands are added.
 a decimal point**, regardless of the interface language. Values are unrounded;
 probabilities are between 0 and 1. This avoids changing the meaning or structure
 of an export when the display language changes.
+
+Single-case and dataset result filenames include the calculation timestamp in
+UTC, matching `Calculated_at_UTC` inside the file, for example
+`OGRS3_Single_case_2026-10-31_14-30-00_UTC.csv`. Repeated downloads of the same
+calculation keep the same name in either interface language. Example dataset
+downloads use the download time. CSV-format guidance appears next to both
+result download controls.
 
 ## Input data and coding
 
@@ -223,5 +235,9 @@ contracts or deletion guarantees.
 
 Application code is under the [MIT license](LICENSE), Merten Neumann. This does
 not grant rights to the cited publications or external Excel tool. Technical
-feedback is welcome via [GitHub Issues](https://github.com/MertenNeumann/OGRS_Calculator/issues),
-without personal information or original datasets.
+feedback, feature requests and suggestions for additions are welcome via
+[GitHub Issues](https://github.com/MertenNeumann/OGRS_Calculator/issues), without
+personal information or original datasets. The separate
+[VRAG-R calculator](https://mertenneumann.shinyapps.io/VRAGR_Calculator/) and its
+[source code](https://github.com/MertenNeumann/VRAGR_Calculator) are linked from
+the app's About tab.

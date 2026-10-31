@@ -18,9 +18,12 @@ intro <- function(kicker, title, text) div(class = "section-intro",
 interpretation_note <- function() notice(
   tags$strong("What is estimated? "),
   "General reoffending within one or two years from the start of the at-risk period. ",
-  "This is not a specific prediction of violent or sexual reoffending. The group-based estimate complements an individual assessment. ",
+  "The group-based estimate complements an individual assessment. ",
   manual_link("Interpretation and limitations in the manual", 18))
 item_hint <- function(...) div(class = "item-hint", ...)
+csv_export_note <- function(batch = FALSE) p(class = "item-hint csv-export-note",
+  "CSV uses UTF-8, commas as field separators and a decimal point. Column names are in English. Probabilities are exported unrounded between 0 and 1.",
+  if (batch) " Invalid rows include a status and error explanations.")
 choice_offences <- setNames(ogrs_offences$code, ogrs_offences$label)
 number_item <- function(id, field, value = NA_real_) numericInput(id,
   paste0(sub("Item", "Item ", field), " · ", ogrs_items[[field]]), value = value,
@@ -31,8 +34,8 @@ ui <- page_navbar(
     span("OGRS", tags$small("Reoffending estimates"))),
   id = "main_nav", selected = "single", lang = "en", fillable = FALSE,
   window_title = "OGRS 3 · Reoffending estimates",
-  theme = bs_theme(version = 5, bg = "#f3f6f7", fg = "#203b43", primary = "#156f6a",
-    secondary = "#536b75", base_font = "system-ui", heading_font = "system-ui"),
+  theme = bs_theme(version = 5, bg = "#f5f5f5", fg = "#333333", primary = "#337ab7",
+    secondary = "#60666c", base_font = "system-ui", heading_font = "system-ui"),
   header = tags$head(tags$link(rel = "stylesheet", href = "app.css"),
     tags$script(id = "i18n-catalog", type = "application/json",
       HTML(jsonlite::toJSON(as.list(.translation_catalog), auto_unbox = TRUE))),
@@ -107,7 +110,7 @@ ui <- page_navbar(
       uiOutput("batch_summary"),
       i18n_select_input("batch_outcome", "Display distribution", choices = c("One year" = "Prob_one_year", "Two years" = "Prob_two_years", "Copas rate" = "Copas_rate")),
       plotOutput("batch_plot", height = "300px"), uiOutput("batch_download_control"),
-      p(class = "item-hint", "CSV uses UTF-8, commas as field separators and a decimal point. Probabilities are exported unrounded between 0 and 1. Invalid rows include a status and error explanations.")),
+      csv_export_note(batch = TRUE)),
     interpretation_note()
   ),
   nav_panel("Explore", value = "explore",
@@ -128,8 +131,8 @@ ui <- page_navbar(
         plotOutput("explore_plot", height = "520px"),
         p(class = "item-hint", "Only whole years and whole conviction counts are scored. Age-band effects are shown as steps.")))
   ),
-  nav_panel("Method & guidance", value = "methods",
-    intro("BACKGROUND", "Understand the method and its limits.",
+  nav_panel("Methods", value = "methods",
+    intro("METHODS", "OGRS 3: instrument and calculation",
       "This app implements the German coding of the Offender Group Reconviction Scale, version 3. The German manual remains the authoritative coding reference."),
     layout_columns(col_widths = c(7, 5),
       card(card_header(h2("What OGRS 3 estimates")),
@@ -144,6 +147,8 @@ ui <- page_navbar(
       card(card_header(h2("Model and sources")),
         p("The app uses the original coefficients from Howard et al. (2009), including the age bands 18–20 and 21–24. Item names and coding guidance follow Breiling et al. (2022)."),
         p("The German coding restricts criminal history to convictions. The British original also includes cautions, reprimands and warnings. This is not a model re-estimated using German data."),
+        p("The model combines the Copas rate with criminal-history, age/sex and offence terms. A logistic function converts the weighted sum into cumulative one- and two-year probabilities. Both periods start at the age specified in Item 3."),
+        p(tags$a("Calculation code", href = "https://github.com/MertenNeumann/OGRS_Calculator/blob/main/OGRS_Calculator.R", target = "_blank", rel = "noopener noreferrer")),
         p(manual_link("Breiling, Dahle, Oberlader & Rettenberger (2022)"), ". BM-Online, volume 30. Kriminologische Zentralstelle."),
         p(tags$a("Howard, Francis, Soothill & Humphreys (2009)", href = "https://www.researchgate.net/publication/258365273_OGRS3_the_revised_Offender_Group_Reconviction_Score", target = "_blank", rel = "noopener noreferrer"), ". OGRS 3: The revised Offender Group Reconviction Scale. Ministry of Justice, Research Summary 7/09."),
         accordion(open = FALSE, accordion_panel("Difference from the 2022 Excel tool",
@@ -153,13 +158,28 @@ ui <- page_navbar(
       p("Search by statutory provision or offence category. The table reproduces factual mappings from the German manual and its 2022 Excel tool; it does not replace case-specific coding decisions."),
       textInput("offence_search", "Search, e.g. § 242 StGB", placeholder = "Enter a statutory provision or category"),
       div(class = "table-scroll", tableOutput("offence_lookup")),
-      p(class = "item-hint", "Up to 20 matches are shown. The 2022 list is incomplete and does not reflect later legislative changes. Unlisted or ambiguous cases are not assigned automatically. ", manual_link("Manual appendix", 25))),
-    card(card_header(h2("Data processing and contact")),
+      p(class = "item-hint", "Up to 20 matches are shown. The 2022 list is incomplete and does not reflect later legislative changes. Unlisted or ambiguous cases are not assigned automatically. ", manual_link("Manual appendix", 25)))
+  ),
+  nav_panel("About the app", value = "about",
+    intro("ABOUT", "About this app",
+      "An OGRS 3 calculator developed by Merten Neumann. Source code, contact and related tools."),
+    layout_columns(col_widths = c(7, 5),
+      card(card_header(h2("Code and contact")),
+        p("The application code and documentation are available on ", tags$a("GitHub", href = "https://github.com/MertenNeumann/OGRS_Calculator", target = "_blank", rel = "noopener noreferrer"), "."),
+        p("Bug reports, feature requests and suggestions for additions are welcome via ", tags$a("GitHub Issues", href = "https://github.com/MertenNeumann/OGRS_Calculator/issues", target = "_blank", rel = "noopener noreferrer"), ". Please do not post personal information or original datasets there."),
+        p("Merten Neumann: ", tags$a("ResearchGate", href = "https://www.researchgate.net/profile/Merten-Neumann", target = "_blank", rel = "noopener noreferrer"), " · ",
+          tags$a("Google Scholar", href = "https://scholar.google.com/citations?user=QjfiK8gAAAAJ&hl=de", target = "_blank", rel = "noopener noreferrer"))),
+      card(card_header(h2("Related calculator")),
+        p("The VRAG-R calculator is available as a separate app."),
+        p(tags$a("VRAG-R calculator", href = "https://mertenneumann.shinyapps.io/VRAGR_Calculator/", target = "_blank", rel = "noopener noreferrer")),
+        p(tags$a("VRAG-R source code", href = "https://github.com/MertenNeumann/VRAGR_Calculator", target = "_blank", rel = "noopener noreferrer")))
+    ),
+    card(card_header(h2("Data processing")),
       p("Calculations run on the server, not exclusively in your browser. Inputs and uploaded files are available for processing during the session. The application code does not create a permanent case database or log case details."),
-      p("The app removes temporary uploads when a file is replaced and when the session ends, where the server can execute cleanup. A lost connection is not necessarily recognised immediately as the end of a session. Infrastructure log and backup retention depends on the hosting provider."),
-      p("For deployments on shinyapps.io, Posit documents hosting in AWS us-east-1 (USA). Those responsible for a deployment must assess its suitability for their data and use case. Self-hosted deployments have their own operating conditions."),
-      p(tags$a("Posit security information", href = "https://docs.posit.co/shinyapps.io/guide/security_and_compliance/index.html", target = "_blank", rel = "noopener noreferrer")),
-      p("Developed by Merten Neumann. Technical feedback via ", tags$a("GitHub Issues", href = "https://github.com/MertenNeumann/OGRS_Calculator/issues", target = "_blank", rel = "noopener noreferrer"), ". Please do not post personal information or original datasets there."))
+      accordion(open = FALSE, accordion_panel("Hosting and temporary files",
+        p("The app removes temporary uploads when a file is replaced and when the session ends, where the server can execute cleanup. A lost connection is not necessarily recognised immediately as the end of a session. Infrastructure log and backup retention depends on the hosting provider."),
+        p("For deployments on shinyapps.io, Posit documents hosting in AWS us-east-1 (USA). Those responsible for a deployment must assess its suitability for their data and use case. Self-hosted deployments have their own operating conditions."),
+        p(tags$a("Posit security information", href = "https://docs.posit.co/shinyapps.io/guide/security_and_compliance/index.html", target = "_blank", rel = "noopener noreferrer")))))
   ),
   nav_spacer(),
   nav_item(div(class = "language-control", i18n_select_input("language", "Language / Sprache",
@@ -229,7 +249,8 @@ server <- function(input, output, session) {
       p(class = "copas-value", "Copas rate: ", strong(id = "copas_value", format_copas(score$Copas_rate, language()))),
       div(class = "result-meta", paste(tx("Calculated:"), format_local_time(saved$time, language()))),
       accordion(open = FALSE, accordion_panel("Inputs used", tableOutput("single_input_summary"))),
-      downloadButton("single_download", "Download result as CSV", class = "btn-outline-primary"))
+      downloadButton("single_download", "Download result as CSV", class = "btn-outline-primary"),
+      csv_export_note())
   })
   output$single_input_summary <- renderTable({
     req(single_ready()); data <- single_saved()$data
@@ -238,7 +259,10 @@ server <- function(input, output, session) {
     values[6] <- offence_labels(language())[match(data$Item6, ogrs_offences$code)]
     setNames(data.frame(Item = unname(item_labels(language())), Value = values), tx(c("Item", "Value")))
   }, rownames = FALSE)
-  output$single_download <- downloadHandler(filename = function() "OGRS3_Single_case.csv", content = function(file) {
+  output$single_download <- downloadHandler(filename = function() {
+    req(single_ready())
+    ogrs_export_filename("Single_case", single_saved()$time)
+  }, content = function(file) {
     req(single_ready())
     saved <- single_saved()
     export <- make_ogrs_export(saved$data, saved$scores, validate_ogrs(saved$data), timestamp = saved$time)
@@ -384,11 +408,14 @@ server <- function(input, output, session) {
     if (batch_ready()) downloadButton("batch_download", "Download results", class = "btn-primary")
     else tags$button("Download available after an up-to-date calculation", class = "btn btn-secondary", disabled = "disabled")
   })
-  output$batch_download <- downloadHandler(filename = function() "OGRS3_Results.csv", content = function(file) {
+  output$batch_download <- downloadHandler(filename = function() {
+    req(batch_ready())
+    ogrs_export_filename("Results", batch_saved()$time)
+  }, content = function(file) {
     req(batch_ready())
     write.csv(batch_saved()$export, file, row.names = FALSE, na = "", fileEncoding = "UTF-8")
   })
-  output$example_download <- downloadHandler(filename = function() "OGRS3_Example_data.csv", content = function(file) {
+  output$example_download <- downloadHandler(filename = function() ogrs_export_filename("Example_data", Sys.time()), content = function(file) {
     file.copy(file.path(.app_root, "examples/example-data.csv"), file, overwrite = TRUE)
   })
   output$batch_plot <- renderPlot({
@@ -399,10 +426,10 @@ server <- function(input, output, session) {
     validate(need(length(values) > 0, tx("No scoreable values are available.")))
     data <- data.frame(Value = values)
     plot <- ggplot(data, aes(x = Value)) + geom_histogram(aes(y = after_stat(density)),
-      bins = min(30L, max(1L, ceiling(sqrt(length(values))))), fill = "#cce2df", colour = "white") +
+      bins = min(30L, max(1L, ceiling(sqrt(length(values))))), fill = "#d3d3d3", colour = "#60666c") +
       labs(x = tx(if (key == "Copas_rate") "Copas rate" else "Estimated general reoffending"), y = tx("Density"),
         subtitle = paste(tx("Scoreable cases:"), length(values))) + theme_minimal(base_size = 13)
-    if (length(unique(values)) >= 2L) plot <- plot + geom_density(colour = "#156f6a", linewidth = 0.8,
+    if (length(unique(values)) >= 2L) plot <- plot + geom_density(colour = "#b22222", linewidth = 0.8,
       bounds = if (key == "Copas_rate") c(-Inf, Inf) else c(0, 1))
     if (key != "Copas_rate") plot <- plot + scale_x_continuous(labels = probabilities) + coord_cartesian(xlim = c(0, 1))
     plot
