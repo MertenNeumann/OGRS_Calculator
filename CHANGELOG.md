@@ -1,5 +1,11 @@
 # Change history
 
+## 2.1.4 · Unreleased · 31 October 2026
+
+- Align the English/German Data processing section with the VRAG-R calculator:
+  show concise server-processing, temporary-upload and hosting information
+  directly, followed by the Posit security and compliance documentation link.
+
 ## 2.1.3 · Unreleased · 31 October 2026
 
 - Add a short English/German AI-assisted development disclosure in About the
