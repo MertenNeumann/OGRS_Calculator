@@ -1,0 +1,13 @@
+name: OGRS_Calculator
+title: OGRS_Calculator
+username:
+account: mertenneumann
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7410656
+bundleId: 6573135
+url: https://mertenneumann.shinyapps.io/OGRS_Calculator/
+when: 1669824732.96252
+lastSyncTime: 1669824732.96253
+asMultiple: FALSE
+asStatic: FALSE
