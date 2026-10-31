@@ -179,7 +179,9 @@ ui <- page_navbar(
       accordion(open = FALSE, accordion_panel("Hosting and temporary files",
         p("The app removes temporary uploads when a file is replaced and when the session ends, where the server can execute cleanup. A lost connection is not necessarily recognised immediately as the end of a session. Infrastructure log and backup retention depends on the hosting provider."),
         p("For deployments on shinyapps.io, Posit documents hosting in AWS us-east-1 (USA). Those responsible for a deployment must assess its suitability for their data and use case. Self-hosted deployments have their own operating conditions."),
-        p(tags$a("Posit security information", href = "https://docs.posit.co/shinyapps.io/guide/security_and_compliance/index.html", target = "_blank", rel = "noopener noreferrer")))))
+        p(tags$a("Posit security information", href = "https://docs.posit.co/shinyapps.io/guide/security_and_compliance/index.html", target = "_blank", rel = "noopener noreferrer"))))),
+    card(card_header(h2("AI-assisted development")),
+      p("OpenAI Codex assisted with revising the code, interface, documentation and software tests. The app calculates results using the documented R code; no AI model is used to score cases."))
   ),
   nav_spacer(),
   nav_item(div(class = "language-control", i18n_select_input("language", "Language / Sprache",

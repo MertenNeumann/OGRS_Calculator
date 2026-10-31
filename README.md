@@ -247,3 +247,7 @@ personal information or original datasets. The separate
 [VRAG-R calculator](https://mertenneumann.shinyapps.io/VRAGR_Calculator/) and its
 [source code](https://github.com/MertenNeumann/VRAGR_Calculator) are linked from
 the app's About tab.
+
+The About tab also includes an AI-assisted development disclosure. OpenAI Codex
+assisted with revising the code, interface, documentation and software tests.
+Case calculations use the documented R code; no AI model is used to score cases.

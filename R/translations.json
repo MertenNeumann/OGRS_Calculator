@@ -119,6 +119,8 @@
   "The VRAG-R calculator is available as a separate app.": "Der VRAG-R-Rechner steht als eigenständige App zur Verfügung.",
   "VRAG-R calculator": "VRAG-R-Rechner",
   "VRAG-R source code": "VRAG-R-Quellcode",
+  "AI-assisted development": "KI-unterstützte Entwicklung",
+  "OpenAI Codex assisted with revising the code, interface, documentation and software tests. The app calculates results using the documented R code; no AI model is used to score cases.": "OpenAI Codex wurde bei der Überarbeitung des Programmcodes, der Benutzeroberfläche, der Dokumentation und der Softwaretests eingesetzt. Die Berechnung erfolgt anhand des dokumentierten R-Codes; ein KI-Modell wird dafür nicht verwendet.",
   "Data processing": "Datenverarbeitung",
   "Hosting and temporary files": "Hosting und temporäre Dateien",
   "Calculations run on the server, not exclusively in your browser. Inputs and uploaded files are available for processing during the session. The application code does not create a permanent case database or log case details.": "Die Berechnung findet auf dem Server statt, nicht ausschließlich in Ihrem Browser. Eingaben und hochgeladene Dateien sind während der Sitzung für die Verarbeitung verfügbar. Der Anwendungscode schreibt keine dauerhafte Falldatenbank und protokolliert keine Fallangaben.",

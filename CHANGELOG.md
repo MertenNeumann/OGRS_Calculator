@@ -1,5 +1,12 @@
 # Change history
 
+## 2.1.3 · Unreleased · 31 October 2026
+
+- Add a short English/German AI-assisted development disclosure in About the
+  app, matching the VRAG-R calculator. Credit OpenAI Codex for assistance with
+  code, interface, documentation and tests, and clarify that case calculations
+  use documented R code without an AI model.
+
 ## 2.1.2 · Unreleased · 31 October 2026
 
 - Replace the short introductions in both languages with instructions for each
