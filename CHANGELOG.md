@@ -1,5 +1,18 @@
 # Change history
 
+## 2.1.2 · Unreleased · 31 October 2026
+
+- Replace the short introductions in both languages with instructions for each
+  tab's inputs, calculation, export and reference functions.
+- Use “Berechnung für Datensätze” instead of “Stapelverarbeitung”.
+- Explain graphical exploration and direct users to Single case or Dataset for
+  calculations on specific cases.
+- Explain that six static factors estimate statistical reoffending risk and
+  should be considered alongside other information in an individual assessment.
+- Fix translated selection prompts appearing as clipped text beside already
+  selected columns and categories. Empty controls retain translated prompts.
+- Wrap long selected labels without overlapping the dropdown arrow.
+
 ## 2.1.1 · Unreleased · 31 October 2026
 
 - Restore the original grey/white palette and blue accents, with grey histogram

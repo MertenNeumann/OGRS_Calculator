@@ -35,9 +35,13 @@
               control.updateOption(option.value, Object.assign({}, existing, {[field]: label}));
             }
             if (option.value === "") {
-              control.settings.placeholder = label;
-              if (control.$control_input.attr("placeholder") !== label) {
-                control.$control_input.attr("placeholder", label);
+              // Selectize hides prompts once a value is selected and sizes the
+              // empty input to fit its prompt. Preserve both behaviours.
+              const placeholder = control.items.length ? undefined : label;
+              if (control.settings.placeholder !== label ||
+                  control.$control_input.attr("placeholder") !== placeholder) {
+                control.settings.placeholder = label;
+                control.updatePlaceholder();
               }
             }
           }

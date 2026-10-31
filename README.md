@@ -70,6 +70,11 @@ and access-control configuration.
 In German, these tabs are labelled **Einzelfall**, **Datensatz**, **Ausprobieren**,
 **Methodische Hinweise** and **Über die App**.
 
+Each tab begins with instructions for its controls and available actions. The
+dataset view uses **Berechnung für Datensätze** in German; Explore explains how
+to vary inputs graphically and points to Single case or Dataset for calculations
+on specific cases.
+
 The language setting is local to each Shiny session. It translates headings,
 controls, choices, validation messages, result summaries, plot labels and
 accessibility text. It does not translate uploaded values, IDs, column names or
@@ -204,7 +209,8 @@ The browser test starts its own local Shiny server and uses synthetic data only.
 `OGRS_RSCRIPT` selects an Rscript executable; `CHROMIUM_PATH` can select an
 installed Chromium browser. Checks cover English and German, switching with
 existing results and custom mappings, upload/export, invalidation, plots and
-mobile layout. GitHub Actions runs the R and browser suites.
+mobile layout, including selection prompts and the readability of mapping
+controls in both languages. GitHub Actions runs the R and browser suites.
 
 Translation strings live in `R/translations.json` with English source keys.
 `R/i18n.R` marks application-authored text; `www/i18n.js` updates marked text

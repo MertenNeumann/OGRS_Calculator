@@ -48,9 +48,32 @@ def run_browser(url, directory):
             assert first_tab["x"] - (brand["x"] + brand["width"]) >= 24
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
 
+        def check_mapping_controls():
+            # A selected value must not be followed by a clipped empty-choice
+            # prompt. Long selected labels must fit inside their controls.
+            page.wait_for_function("""() => Array.from(document.querySelectorAll(
+                '#column_mapping select, #category_mapping select')).every(el => {
+                const c = el.selectize;
+                return c && (c.items.length ? !c.$control_input.attr('placeholder') :
+                    c.$control_input.attr('placeholder') === c.settings.placeholder);
+            })""")
+            clipped = page.locator("#column_mapping select, #category_mapping select").evaluate_all("""els => els.flatMap(el => {
+                const c = el.selectize;
+                const bounds = c.$control[0].getBoundingClientRect();
+                return Array.from(c.$control[0].querySelectorAll('.item')).filter(item => {
+                    const r = item.getBoundingClientRect();
+                    return item.scrollWidth > item.clientWidth + 1 || r.left < bounds.left ||
+                        r.right > bounds.right - 20 || r.bottom > bounds.bottom;
+                }).map(item => ({id:el.id, text:item.textContent}));
+            })""")
+            assert not clipped, clipped
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
+
         expect(page.locator("html")).to_have_attribute("lang", "en")
         expect(page.locator("#language")).to_have_value("en")
         expect(page.get_by_role("heading", name="Estimate the risk of general reoffending.")).to_be_visible()
+        expect(page.locator(".tab-pane.active .intro-copy")).to_contain_text("click Calculate result")
+        expect(page.locator(".tab-pane.active .intro-copy")).to_contain_text("CSV file")
         expect(page.locator('a[data-value="methods"]')).to_have_text("Methods")
         expect(page.locator('a[data-value="about"]')).to_have_text("About the app")
         expect(page.locator(".tab-pane.active")).not_to_contain_text("specific prediction of violent or sexual")
@@ -72,6 +95,12 @@ def run_browser(url, directory):
         page.screenshot(path=str(directory / "single-case-english.png"), full_page=True)
 
         def select(id_, value):
+            page.wait_for_function("""([id, value]) => {
+                const el = document.getElementById(id);
+                if (!el || el.tagName !== 'SELECT') return false;
+                return el.selectize ? value === '' || Object.hasOwn(el.selectize.options, value) :
+                    Array.from(el.options).some(option => option.value === value);
+            }""", arg=[id_, value])
             page.evaluate("""([id, value]) => {
                 const el = document.getElementById(id);
                 if (!el || el.tagName !== 'SELECT') throw new Error('Expected a select element: ' + id);
@@ -88,6 +117,8 @@ def run_browser(url, directory):
         expect(page.locator("#prob_two")).to_have_text("22,1 %")
         expect(page.locator("#copas_value")).to_have_text("-2,303")
         expect(page.get_by_role("heading", name="Allgemeines Rückfallrisiko einschätzen.")).to_be_visible()
+        expect(page.locator(".tab-pane.active .intro-copy")).to_contain_text("unter den Eingabefeldern")
+        expect(page.locator(".tab-pane.active .intro-copy")).to_contain_text("CSV-Datei")
         expect(page.locator('label[for="single_age_last"]')).to_have_text("Item 2 · Alter bei der letzten Verurteilung")
         expect(page.locator("#single_sex + .selectize-control")).to_contain_text("Männlich")
         expect(page.locator("#single_download")).to_be_visible()
@@ -113,9 +144,35 @@ def run_browser(url, directory):
         print("PASS: bilingual single-case results, CSV guidance, timestamped downloads and validation", flush=True)
 
         page.locator('a[data-value="batch"]').click()
+        expect(page.locator(".tab-pane.active .eyebrow")).to_have_text("DATASET CALCULATION")
         page.locator("#batch_file").set_input_files(ROOT / "examples/example-data.csv")
         expect(page.locator("#column_1")).to_have_count(1)
         expect(page.locator("#batch_validation_summary")).to_contain_text("3 scoreable rows", timeout=30000)
+        check_mapping_controls()
+        select("column_1", "")
+        column_prompt = page.locator("#column_1 + .selectize-control input")
+        expect(column_prompt).to_have_attribute("placeholder", "Please select")
+        language("de")
+        expect(column_prompt).to_have_attribute("placeholder", "Bitte auswählen")
+        expect(page.locator(".tab-pane.active .eyebrow")).to_have_text("BERECHNUNG FÜR DATENSÄTZE")
+        expect(page.locator(".tab-pane.active .intro-copy")).to_contain_text("Zuordnung der Geschlechts- und Deliktkategorien")
+        select("column_1", "Item1")
+        expect(page.locator("#batch_validation_summary")).to_contain_text("3 berechenbare Zeilen", timeout=30000)
+        check_mapping_controls()
+        language("en")
+        sex_control = page.locator('#category_mapping select[id^="map_sex_"]').first
+        sex_id = sex_control.get_attribute("id")
+        sex_value = sex_control.input_value()
+        select(sex_id, "")
+        category_prompt = page.locator(f"#{sex_id} + .selectize-control input")
+        expect(category_prompt).to_have_attribute("placeholder", "Not mapped")
+        language("de")
+        expect(category_prompt).to_have_attribute("placeholder", "Nicht zugeordnet")
+        select(sex_id, sex_value)
+        expect(page.locator("#batch_validation_summary")).to_contain_text("3 berechenbare Zeilen", timeout=30000)
+        check_mapping_controls()
+        page.screenshot(path=str(directory / "dataset-mappings-german.png"), full_page=True)
+        language("en")
         select("batch_id", "Case_ID")
         page.locator("#batch_calculate").click()
         expect(page.locator("#batch_download")).to_be_visible()
@@ -148,6 +205,7 @@ def run_browser(url, directory):
         assert page.evaluate("id => document.getElementById(id).selectize.getValue()", mapping_id) == "Robbery"
         expect(page.locator(f"#{mapping_id} + .selectize-control")).to_contain_text("Raub")
         expect(page.locator("#category_mapping [data-i18n-raw]").filter(has_text=re.compile("^Violence$"))).to_have_text("Violence")
+        check_mapping_controls()
         expect(page.locator("#batch_preview")).to_contain_text("Male")
         assert download("custom-de.csv").read_bytes() == before
         assert export_names["custom-en.csv"] == export_names["custom-de.csv"]
@@ -171,11 +229,39 @@ def run_browser(url, directory):
         expect(page.locator("#batch_download")).to_have_count(0)
         print("PASS: German input values in English UI and stale-download protection", flush=True)
 
+        long_column = "Principal_current_offence_column_" * 5
+        long_file = directory / "long-column.csv"
+        with long_file.open("w", encoding="utf-8", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Item1", "Item2", "Item3", "Item4", "Item5", long_column])
+            writer.writerow(["Male", 35, 35, 2, 20, "Taking & driving away and related offences"])
+        page.locator("#batch_file").set_input_files(long_file)
+        expect(page.locator("#import_message")).to_contain_text("1 data row", timeout=15000)
+        select("column_6", long_column)
+        expect(page.locator("#batch_validation_summary")).to_contain_text("1 scoreable row", timeout=30000)
+        # Wait for this upload's category, since the previous file also had one row.
+        offence_label = page.locator("#category_mapping label").filter(has_text="Taking & driving away and related offences")
+        expect(offence_label).to_have_count(1)
+        offence_control = offence_label.locator("xpath=..").locator("select")
+        offence_id = offence_control.get_attribute("id")
+        for lang in ("en", "de"):
+            language(lang)
+            select(offence_id, "Taking_Driving" if lang == "en" else "Public_order")
+            for width in (1440, 1024, 390):
+                page.set_viewport_size({"width": width, "height": 1000})
+                check_mapping_controls()
+            page.screenshot(path=str(directory / f"long-mapping-mobile-{lang}.png"), full_page=True)
+            page.set_viewport_size({"width": 1440, "height": 1000})
+        language("en")
+        print("PASS: translated prompts only for empty fields; long mapping labels fit on desktop and mobile", flush=True)
+
         page.locator('a[data-value="explore"]').click()
+        expect(page.locator(".tab-pane.active .intro-copy")).to_contain_text("use Single case or Dataset")
         expect(page.locator("#explore_plot img")).to_be_visible(timeout=30000)
         select("explore_outcome", "Prob_two_years")
         expect(page.locator("#explore_plot img")).to_be_visible()
         language("de")
+        expect(page.locator(".tab-pane.active .intro-copy")).to_contain_text("Reiter „Einzelfall“ oder „Datensatz“")
         expect(page.locator("#explore_status")).to_contain_text("zulässige Modellkombinationen")
         expect(page.locator("#explore_plot img")).to_have_attribute("alt", re.compile("OGRS-3-Modellschätzungen"))
         page.locator('input[name="explore_sexes"][value="m"]').uncheck()
@@ -186,6 +272,7 @@ def run_browser(url, directory):
         expect(page.locator("#explore_plot img")).to_be_visible(timeout=30000)
         page.locator('a[data-value="methods"]').click()
         expect(page.get_by_role("heading", name="OGRS 3: instrument and calculation")).to_be_visible()
+        expect(page.locator(".tab-pane.active")).to_contain_text("should not be used as the sole source of information")
         limitation = "No specific prediction of sexual or violent reoffending, or of the severity of a future offence."
         expect(page.get_by_text(limitation, exact=True)).to_have_count(1)
         expect(page.get_by_text(limitation, exact=True)).to_be_visible()
@@ -196,6 +283,7 @@ def run_browser(url, directory):
         language("de")
         expect(page.locator("#offence_lookup")).to_contain_text("Vorschrift")
         expect(page.get_by_role("heading", name="OGRS 3: Instrument und Berechnung")).to_be_visible()
+        expect(page.locator(".tab-pane.active")).to_contain_text("nicht als alleinige Informationsquelle")
         page.screenshot(path=str(directory / "methods-german.png"), full_page=True)
         page.locator('a[data-value="about"]').click()
         expect(page.get_by_role("heading", name="Über diese App")).to_be_visible()
