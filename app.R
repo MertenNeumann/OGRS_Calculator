@@ -1,815 +1,469 @@
-##############
-###Packages###
-##############
-library("haven")
-library("shiny")
-library("tidyverse")
-library("ggplot2")
-library("readxl")
-library("ggpubr")
+# OGRS 3: bilingual Shiny application. Run with shiny::runApp(".").
+library(shiny)
+library(bslib)
+library(ggplot2)
+source("OGRS_Calculator.R", local = TRUE)
+source("R/workflow.R", local = TRUE)
+.app_root <- normalizePath(".", mustWork = TRUE)
+source("R/i18n.R", local = TRUE)
+options(shiny.maxRequestSize = 10 * 1024^2, shiny.sanitize.errors = TRUE)
 
-###################
-###OGRS function###
-###################
-
-# OGRS 3 - Calculator
-# by Merten Neumann
-#
-# based on
-#
-# Breiling, L., Dahle, K.-P., Oberlader, V. & Rettenberger, M. (2022). 
-#   Die deutsche Version der Offender Group Reconviction Scale, Version 3 (OGRS 3) 
-#   (Berichte und Materialien (BM-Online), Bd. 30). Wiesbaden: Kriminologische Zentralstelle.
-#
-# Howard, P., Francis, B., Soothill, K. & Humphreys, L. (2009). 
-#   OGRS 3: The revised offender group reconviction scale. London: Ministry of Justice.
-
-ogrs <- function(Data = NA, Item1 = c("m", "f"), 
-                 Item2 = NA, Item3 = NA, Item4 = NA, 
-                 Item5 = NA, Item6 = c("Violence", "Robbery", "Public_order", "Sexual_no_child",
-                                       "Sexual_child", "Soliciting_Prostitution", "Burglary_domestic",
-                                       "Burglary_other", "Theft_non_motor", "Handling_Stolen_Goods",
-                                       "Fraud_Forgery", "Absconding_Bail_Offences", "Taking_Driving", "Theft_from_Vehicle",
-                                       "Other_motoring", "Drink_Driving", "Criminal_Damage", "Drug_import_export_production",
-                                       "Drug_possession_supply", "Other"), Shiny_Progress = FALSE) {
-  
-  comp_ogrs <- function(Item1 = c("m", "f"), 
-                        Item2 = NA, Item3 = NA, Item4 = NA, 
-                        Item5 = NA, Item6 = c("Violence", "Robbery", "Public_order", "Sexual_no_child",
-                                              "Sexual_child", "Soliciting_Prostitution", "Burglary_domestic",
-                                              "Burglary_other", "Theft_non_motor", "Handling_Stolen_Goods",
-                                              "Fraud_Forgery", "Absconding_Bail_Offences", "Taking_Driving", "Theft_from_Vehicle",
-                                              "Other_motoring", "Drink_Driving", "Criminal_Damage", "Drug_import_export_production",
-                                              "Drug_possession_supply", "Other")) {
-    
-    require(tidyverse)
-    
-    #Compute Copas Rate
-    Copas_rate <- log((1 + Item4)/(10 + (Item2 - Item5)))
-    
-    #Weights for one and 2 years
-    A1 <- 1.402562384
-    A2 <- 2.121705678
-    
-    #Copas Rate with corresponding weight
-    B1 <- Copas_rate * 1.251124464
-    
-    #Weights for sanctioning history (only for convictions)
-    B2 <- ifelse(Item4 == 0, 0.126142106, 0.463062792)
-    
-    #Weights based on age and sex
-    B3 <- case_when(Item1 == "m" & Item3 >= 10 & Item3 < 12 ~ 0,
-                    Item1 == "m" & Item3 >= 12 & Item3 < 14 ~ 0.083922902,
-                    Item1 == "m" & Item3 >= 14 & Item3 < 16 ~ 0.075775765,
-                    Item1 == "m" & Item3 >= 16 & Item3 < 18 ~ (-0.061594199),
-                    Item1 == "m" & Item3 >= 18 & Item3 < 21 ~ (-0.625103618),
-                    Item1 == "m" & Item3 >= 21 & Item3 < 25 ~ (-1.051515067),
-                    Item1 == "m" & Item3 >= 25 & Item3 < 30 ~ (-1.166679288),
-                    Item1 == "m" & Item3 >= 30 & Item3 < 35 ~ (-1.325976554),
-                    Item1 == "m" & Item3 >= 35 & Item3 < 40 ~ (-1.368045933),
-                    Item1 == "m" & Item3 >= 40 & Item3 < 50 ~ (-1.499690953),
-                    Item1 == "m" & Item3 >= 50 ~ (-2.025261458),
-                    
-                    Item1 == "f" & Item3 >= 10 & Item3 < 12 ~ (-0.785038489),
-                    Item1 == "f" & Item3 >= 12 & Item3 < 14 ~ (-0.613852078),
-                    Item1 == "f" & Item3 >= 14 & Item3 < 16 ~ (-0.669521331),
-                    Item1 == "f" & Item3 >= 16 & Item3 < 18 ~ (-0.959179629),
-                    Item1 == "f" & Item3 >= 18 & Item3 < 21 ~ (-0.897480934),
-                    Item1 == "f" & Item3 >= 21 & Item3 < 25 ~ (-1.028488454),
-                    Item1 == "f" & Item3 >= 25 & Item3 < 30 ~ (-1.052777806),
-                    Item1 == "f" & Item3 >= 30 & Item3 < 35 ~ (-1.129127959),
-                    Item1 == "f" & Item3 >= 35 & Item3 < 40 ~ (-1.42187494),
-                    Item1 == "f" & Item3 >= 40 & Item3 < 50 ~ (-1.524652221),
-                    Item1 == "f" & Item3 >= 50 ~ (-2.44983716))
-    
-    #Weights based on current offence
-    B4 <- case_when(Item6 == "Violence" ~ (0),
-                    Item6 == "Robbery" ~ (-0.634795912),
-                    Item6 == "Public_order" ~ (0.181917975),
-                    Item6 == "Sexual_no_child" ~ (0.003276327),
-                    Item6 == "Sexual_child" ~ (-0.653434071),
-                    Item6 == "Soliciting_Prostitution" ~ (0.760608858),
-                    Item6 == "Burglary_domestic" ~ (-0.12394352),
-                    Item6 == "Burglary_other" ~ (0.240604429),
-                    Item6 == "Theft_non_motor" ~ (0.661244321),
-                    Item6 == "Handling_Stolen_Goods" ~ (0.351866973),
-                    Item6 == "Fraud_Forgery" ~ (0.159910192),
-                    Item6 == "Absconding_Bail_Offences" ~ (0.733378677),
-                    Item6 == "Taking_Driving" ~ (0.380059431),
-                    Item6 == "Theft_from_Vehicle" ~ (0.427225615),
-                    Item6 == "Other_motoring" ~ (0.262228428),
-                    Item6 == "Drink_Driving" ~ (-0.121439408),
-                    Item6 == "Criminal_Damage" ~ (0.204960477),
-                    Item6 == "Drug_import_export_production" ~ (-0.795556373),
-                    Item6 == "Drug_possession_supply" ~ (0.077165871),
-                    Item6 == "Other" ~ (-0.060667525))
-    
-    #Compute probabilities
-    z1 <- A1 + B1 + B2 + B3 + B4
-    z2 <- A2 + B1 + B2 + B3 + B4
-    
-    Prob1 <- exp(z1)/(1 + exp(z1))
-    Prob2 <- exp(z2)/(1 + exp(z2))
-    
-    Out_vec <- as.numeric(c(Prob1, Prob2, Copas_rate))
-    names(Out_vec) <- c("Prob_one_year", "Prob_two_years", "Copas_rate")
-    
-    Out_vec
-    
-  }
-  
-  if(all(is.na(Data))){
-    
-    Out <- comp_ogrs(Item1 = Item1, Item2 = Item2, Item3 = Item3, Item4 = Item4, Item5 = Item5, Item6 = Item6)
-    
-  }else{
-    
-    Out <- matrix(data = rep(NA, times = 3 * nrow(Data)), nrow = nrow(Data), ncol = 3)
-    
-    if(Shiny_Progress){
-      
-      withProgress(message = "Computing", value = 0, {
-        
-        N <- nrow(Data)
-        Inc_idx <- ceiling(N/100)
-        
-        for(i in 1:N) {
-          
-          Out[i,] <- comp_ogrs(Item1 = Data[i, 1], Item2 = Data[i, 2], Item3 = Data[i, 3], Item4 = Data[i, 4], Item5 = Data[i, 5], Item6 = Data[i, 6])
-          
-          if(i %% Inc_idx == 0) {setProgress(value = i/N, detail = paste(as.character(round((i/N) * 100, digits = 0)), "%"))}
-          
-        }
-      })
-      
-    }else{
-      
-      for(i in 1:nrow(Data)) {
-        
-        Out[i,] <- comp_ogrs(Item1 = Data[i, 1], Item2 = Data[i, 2], Item3 = Data[i, 3], Item4 = Data[i, 4], Item5 = Data[i, 5], Item6 = Data[i, 6])
-        
-      }
-    }
-    
-    colnames(Out) <- c("Prob_one_year", "Prob_two_years", "Copas_rate")
-    
-    Out <- as.data.frame(Out)
-    
-  }
-  
-  Out
-  
+manual_link <- function(label = "German manual (PDF)", page = NULL) {
+  tags$a(label, href = paste0(OGRS_MANUAL_URL, if (!is.null(page)) paste0("#page=", page)),
+         target = "_blank", rel = "noopener noreferrer")
 }
+notice <- function(..., type = "info") div(class = paste("notice", paste0("notice-", type)), ...)
+intro <- function(kicker, title, text) div(class = "section-intro",
+  p(class = "eyebrow", kicker), h1(title), p(class = "intro-copy", text))
+interpretation_note <- function() notice(
+  tags$strong("What is estimated? "),
+  "General reoffending within one or two years from the start of the at-risk period. ",
+  "This is not a specific prediction of violent or sexual reoffending. The group-based estimate complements an individual assessment. ",
+  manual_link("Interpretation and limitations in the manual", 18))
+item_hint <- function(...) div(class = "item-hint", ...)
+choice_offences <- setNames(ogrs_offences$code, ogrs_offences$label)
+number_item <- function(id, field, value = NA_real_) numericInput(id,
+  paste0(sub("Item", "Item ", field), " · ", ogrs_items[[field]]), value = value,
+  min = if (field == "Item4") 0 else 10, max = if (field == "Item4") Inf else 120, step = 1)
 
-#Lookup Item 1
-Lookup_item1 <- c("m", "f")
-names(Lookup_item1) <- c("Male", "Female")
-
-
-#Lookups Item 6
-Lookup_item6 <- c("Violence", "Robbery", "Public_order", "Sexual_no_child",
-                  "Sexual_child", "Soliciting_Prostitution", "Burglary_domestic",
-                  "Burglary_other", "Theft_non_motor", "Handling_Stolen_Goods",
-                  "Fraud_Forgery", "Absconding_Bail_Offences", "Taking_Driving", "Theft_from_Vehicle",
-                  "Other_motoring", "Drink_Driving", "Criminal_Damage", "Drug_import_export_production",
-                  "Drug_possession_supply", "Other")
-names(Lookup_item6) <- c("Violence", "Robbery", "Public order", "Sexual (not against child)",
-                         "Sexual (against child)", "Soliciting or prostitution", "Burglary (domestic)",
-                         "Burglary (other)", "Theft (non-motor)", "Handling stolen goods", "Fraud and forgery",
-                         "Absconding or bail offences", "Taking & driving away and related offences",
-                         "Theft from vehicles", "Other motoring", "Drink driving", "Criminal damage",
-                         "Drug import/export/production", "Drug possession/supply", "Other offence")
-
-Lookup_item6_2 <- c("Violence", "Robbery", "Public order", "Sexual (not against child)",
-                           "Sexual (against child)", "Soliciting or prostitution", "Burglary (domestic)",
-                           "Burglary (other)", "Theft (non-motor)", "Handling stolen goods", "Fraud and forgery",
-                           "Absconding or bail offences", "Taking & driving away and related offences",
-                           "Theft from vehicles", "Other motoring", "Drink driving", "Criminal damage",
-                           "Drug import/export/production", "Drug possession/supply", "Other offence")
-names(Lookup_item6_2) <- c("Violence", "Robbery", "Public_order", "Sexual_no_child",
-                  "Sexual_child", "Soliciting_Prostitution", "Burglary_domestic",
-                  "Burglary_other", "Theft_non_motor", "Handling_Stolen_Goods",
-                  "Fraud_Forgery", "Absconding_Bail_Offences", "Taking_Driving", "Theft_from_Vehicle",
-                  "Other_motoring", "Drink_Driving", "Criminal_Damage", "Drug_import_export_production",
-                  "Drug_possession_supply", "Other")
-
-
-
-#Lookup Item names
-Lookup_names <- c("Age at the time of the last conviction", "Age at start of the at-risk period",
-                  "Number of previous convictions", "Age at the time of the first conviction")
-names(Lookup_names) <- c("Item2", "Item3", "Item4", "Item5")
-
-
-
-####################
-###User Interface###
-####################
-ui <- navbarPage(
-  
-  #Application title
-  "OGRS 3 - Calculator",
-  
-  #Position of Navbar
-  position = "fixed-top",
-  collapsible = TRUE,
-  
-    
-    #Tab for calculating OGRS scores
-    tabPanel(title = "Calculate", 
-             
-             div(style = "height:80px"),
-             
-             #Sidebar for single Calculation
-               sidebarPanel(
-                 
-                 #Sidebar Title
-                 h2("Single calculation"),
-                 
-                 p("Here you can compute the OGRS 3 scores for a single case."),
-                 
-                 #Item inputs          
-                 selectInput("item1", label = "Item 1 - Sex", choices = list("Male", "Female")),
-                 numericInput("item2", label = "Item 2 - Age at the time of the last conviction", value = 20),
-                 numericInput("item3", label = "Item 3 -  Age at start of the at-risk period", value = 20),
-                 numericInput("item4", label = "Item 4 - Number of previous convictions", value = 0),
-                 numericInput("item5", label = "Item 5 - Age at the time of the first conviction", value = 20),
-                 selectInput("item6", label = "Item 6 - Principal current offence", choices = list("Violence", "Robbery", "Public order", "Sexual (not against child)",
-                                                                                                   "Sexual (against child)", "Soliciting or prostitution", "Burglary (domestic)",
-                                                                                                   "Burglary (other)", "Theft (non-motor)", "Handling stolen goods", "Fraud and forgery",
-                                                                                                   "Absconding or bail offences", "Taking & driving away and related offences",
-                                                                                                   "Theft from vehicles", "Other motoring", "Drink driving", "Criminal damage",
-                                                                                                   "Drug import/export/production", "Drug possession/supply", "Other offence")),
-                 #Results
-                 h3("Results"),
-                 textOutput("risk_text1"),
-                 textOutput("risk_text2"),
-                 textOutput("risk_text3"),
-                 
-                 div(style = "height:25px")),
-               
-               #Main panel for calculation on dataset
-               mainPanel(
-                 
-                 #Main panel title
-                 h2("Calculation on dataset"),
-                 
-                 p("This section provides the possibility to calculate OGRS 3 scores for a whole dataset in one go."),
-                 
-                 #Instructions       
-                 p("The data must contain information about the following six items of the OGRS 3:"),
-                 p("1. Sex"),
-                 p("2. Age at the time of the last conviction"),
-                 p("3. Age at start of the at-risk period"),
-                 p("4. Number of previous convictions"),
-                 p("5. Age at the time of the first conviction"),
-                 p("6. Principal current offence"),
-                 
-                 p("Follow the instructions below to get your OGRS 3 scores."),
-                 
-                 #Upload  
-                 h3("1. Data Upload"),
-                 
-                 p("Select the format of your data using the drop-down menu. The following formats are supported: ",
-                   a(".xlsx (Excel)", href = "https://www.rdocumentation.org/packages/readxl/versions/0.1.1/topics/read_excel"), ", ",
-                   a(".csv", href = "https://www.rdocumentation.org/packages/readr/versions/2.1.3/topics/read_delim"), ", ",
-                   a(".csv (European)", href = "https://www.rdocumentation.org/packages/readr/versions/2.1.3/topics/read_delim"), ", ",
-                   a(".txt", href = "https://www.rdocumentation.org/packages/readr/versions/2.1.3/topics/read_delim"), ", ",
-                   a(".sav (SPSS)", href = "https://www.rdocumentation.org/packages/haven/versions/2.5.1/topics/read_spss"), "."),
-                 
-                 selectInput("data_format", label = "Choose your data format", choices = list("xlsx (Excel)", "csv", "csv (European)", "txt", "sav (SPSS)")),
-                 
-                 p("Use this button to upload your data."),
-                 fileInput("ogrs_input", label = "Upload dataset", accept = c(".xlsx", ".csv", ".txt", ".sav")),
-                 
-                 #Variable names
-                 h3("2. Choose variable names"),
-                 
-                 p("Here, you can choose which variables from your dataset are to be used for the calculation. Please write the exact variable name under each OGRS 3 item."),
-                 
-                 div(style = "height:30px"),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("nameitem1", "Item 1 - Sex", value = "Item1"),
-                             textInput("nameitem2", "Item 2 - Age at the time of the last conviction", value = "Item2")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("nameitem3", "Item 3 - Age at start of the at-risk period", value = "Item3"),
-                             textInput("nameitem4", "Item 4 - Number of previous convictions", value = "Item4")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("nameitem5", "Item 5 - Age at the time of the first conviction", value = "Item5"),
-                             textInput("nameitem6", "Item 6 - Principal current offence", value = "Item6")),
-                 
-                 #Category Labels
-                 h3("3. Choose category labels"),
-                 
-                 p("The items 1 and 6 of the OGRS 3 are categorical. Please use the following text inputs to
-                    specify the category labels you used in your data."),
-                 p("CAUTION: You need to use the numeric values if you upload a .sav-file and 
-                    your categorical variables are labelled numerics in SPSS"),
-                 
-                 div(style = "height:20px"),
-                 
-                 h4("Item 1 - Sex"),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem1_1", "Male", value = "Male"),
-                             textInput("labelitem1_2", "Female", value = "Female")),
-                 
-                 h4("Item 6 - Principal current offence"),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem6_1", "Violence", value = "Violence"),
-                             textInput("labelitem6_2", "Robbery", value = "Robbery")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem6_3", "Public order", value = "Public order"),
-                             textInput("labelitem6_4", "Sexual (not against child)", value = "Sexual (not against child)")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem6_5", "Sexual (against child)", value = "Sexual (against child)"),
-                             textInput("labelitem6_6", "Soliciting or prostitution", value = "Soliciting or prostitution")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem6_7", "Burglary (domestic)", value = "Burglary (domestic)"),
-                             textInput("labelitem6_8", "Burglary (other)", value = "Burglary (other)")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem6_9", "Theft (non-motor)", value = "Theft (non-motor)"),
-                             textInput("labelitem6_10", "Handling stolen goods", value = "Handling stolen goods")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem6_11", "Fraud and forgery", value = "Fraud and forgery"),
-                             textInput("labelitem6_12", "Absconding or bail offences", value = "Absconding or bail offences")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem6_13", "Taking & driving away and related offences", value = "Taking & driving away and related offences"),
-                             textInput("labelitem6_14", "Theft from vehicles", value = "Theft from vehicles")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem6_15", "Other motoring", value = "Other motoring"),
-                             textInput("labelitem6_16", "Drink driving", value = "Drink driving")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem6_17", "Criminal damage", value = "Criminal damage"),
-                             textInput("labelitem6_18", "Drug import/export/production", value = "Drug import/export/production")),
-                 
-                 splitLayout(cellWidths = c("50%", "50%"),
-                             textInput("labelitem6_19", "Drug possession/supply", value = "Drug possession/supply"),
-                             textInput("labelitem6_20", "Other offence", value = "Other offence")),
-                 
-                 #Compute Scores
-                 h3("4. Compute scores"),
-                 
-                 p("Use this button to compute the risk scores. This may take a moment (depending on the size of your data). 
-                   Observe the progress bar in the lower right-hand corner to check on the progress of the calculation."),
-                 
-                 actionButton("calc", "Calculate OGRS 3 scores"),
-                 
-                 div(style = "height:30px"),
-                 
-                 #Diagnostics
-                 h3("5. Check the distributions"),
-                 
-                 p("The plot shows the distribution of the chosen output within your sample. Use it to check if the computation was successful."),
-                 
-                 radioButtons("risk_idx", "Which output?", 
-                              choices = list("One year" = "Prob_one_year", "Two years" = "Prob_two_years", "Copas rate" = "Copas_rate")),
-                 plotOutput("Distplot"),
-                 
-                 #Download
-                 h3("6. Download"),
-                 
-                 div(style = "border-style: solid; border-color: black; border-width: 2px; padding: 10px; border-radius: 8px;",
-                     p("This button can be used to save the computed OGRS 3 scores as a .csv-file (European)."),
-                     downloadButton("downloadData", "Download")),
-                 
-                 div(style = "height:30px"))),
-               
-    #Tab to explore OGRS distributions           
-    tabPanel(title = "Explore",
-             
-             div(style = "height:70px"),
-             
-             p("This section can be used to explore the impact of different input variables on the distribution of OGRS 3 scores. Use the sidebar
-               on the left side to customize your plots."),
-             
-               #Sidebar to choose inputs
-               sidebarPanel(
-                 style = "height: 90vh; overflow-y: auto;",
-                 
-                 h2("Specify the inputs"),
-                 
-                 #Item on the x-axis
-                 h3("Which item should be displayed on the x-axis?"),
-                 
-                 radioButtons("inputX", "Choose one continuous item", choices = list(
-                   "Item 2" = "Item2",
-                   "Item 3" = "Item3",
-                   "Item 4" = "Item4",
-                   "Item 5" = "Item5"),
-                   selected = "Item4"),
-                 
-                 #Fixed inputs
-                 h3("Which other inputs should be used for calculation?"),
-                 
-                  checkboxGroupInput("checkItem1", "Item 1 - Sex", choices = list(
-                               "Male" = "m",
-                               "Female" = "f"),
-                               selected = "m"), 
-                 
-                 sliderInput("slideItem2", "Item 2 - Age at the time of the last conviction", min = 14, max = 90, value = 20),
-                 sliderInput("slideItem3", "Item 3 - Age at start of the at-risk period", min = 14, max = 90, value = 20),
-                 sliderInput("slideItem4", "Item 4 - Number of previous convictions", min = 0, max = 50, value = 0),
-                 sliderInput("slideItem5", "Item 5 - Age at the time of the first conviction", min = 14, max = 90, value = 20),
-                 
-                  includeScript(path = "js4checkbox.js"),
-                  checkboxGroupInput("checkItem6", "Item 6 - Principal current offence", choices = list(
-                               "Violence" = "Violence", 
-                               "Robbery" = "Robbery", 
-                               "Public order" = "Public_order", 
-                               "Sexual (not against child)" = "Sexual_no_child",
-                               "Sexual (against child)" = "Sexual_child", 
-                               "Soliciting or prostitution" = "Soliciting_Prostitution", 
-                               "Burglary (domestic)" = "Burglary_domestic",
-                               "Burglary (other)" = "Burglary_other", 
-                               "Theft (non-motor)" = "Theft_non_motor", 
-                               "Handling stolen goods" = "Handling_Stolen_Goods", 
-                               "Fraud and forgery" = "Fraud_Forgery",
-                               "Absconding or bail offences" = "Absconding_Bail_Offences", 
-                               "Taking & driving away and related offences" = "Taking_Driving",
-                               "Theft from vehicles" = "Theft_from_Vehicle", 
-                               "Other motoring" = "Other_motoring", 
-                               "Drink driving" = "Drink_Driving", 
-                               "Criminal damage" = "Criminal_Damage",
-                               "Drug import/export/production" = "Drug_import_export_production", 
-                               "Drug possession/supply" = "Drug_possession_supply", 
-                               "Other offence" = "Other"),
-                               selected = "Violence")),
-               
-               #Main panel for the plot
-               mainPanel(plotOutput("Explore_Plot"))),
-    
-    #Tab for explanations about the page
-    tabPanel(title = "About",
-             
-             div(style = "height:70px"),
-             
-             p("This OGRS 3 calculator is mainly based on the German manual by", 
-               a("Breiling, Dahle, Oberlader and Rettenberger (2022).", href = "https://www.krimz.de/publikationen/bm-online/bm-online-30.html"),  
-               "The only difference to the original version described by", 
-               a("Howard, Francis, Soothill and Humphreys (2009)", href = "https://www.researchgate.net/publication/258365273_OGRS3_the_revised_Offender_Group_Reconviction_Score"), 
-               "concerns the sanctions. As most research in Germany is conducted based on official criminal records, 
-                it is common practice to only use registered convictions. Thus, this calculator does not provide the option to include other sanctioning occasions."),
-             p("Please do not upload more data than necessary and adhere to existing data protection regulations.
-               This app is running on shinyapps.io. More information regarding this cloud service can be found", 
-                   a("here.", href = "https://docs.rstudio.com/shinyapps.io/security-and-compliance.html")),
-             p("The R-function that is used to calculate the OGRS 3 scores in this app is accessible on  ", a("github.", href = "https://github.com/MertenNeumann/OGRS_Calculator")),
-               div(style = "height:30px"),
-              p("Have Fun!"),
-              p("Merten Neumann"),
-              p(a("Researchgate", href = "https://www.researchgate.net/profile/Merten-Neumann"), ",",
-                a("Scholar", href = "https://scholar.google.com/citations?user=QjfiK8gAAAAJ&hl=de"))
-  
- )
+ui <- page_navbar(
+  title = div(class = "app-brand", span(class = "brand-symbol", "3"),
+    span("OGRS", tags$small("Reoffending estimates"))),
+  id = "main_nav", selected = "single", lang = "en", fillable = FALSE,
+  window_title = "OGRS 3 · Reoffending estimates",
+  theme = bs_theme(version = 5, bg = "#f3f6f7", fg = "#203b43", primary = "#156f6a",
+    secondary = "#536b75", base_font = "system-ui", heading_font = "system-ui"),
+  header = tags$head(tags$link(rel = "stylesheet", href = "app.css"),
+    tags$script(id = "i18n-catalog", type = "application/json",
+      HTML(jsonlite::toJSON(as.list(.translation_catalog), auto_unbox = TRUE))),
+    tags$script(src = "i18n.js", defer = NA)),
+  footer = div(class = "app-footer", span(paste("OGRS 3 · App", OGRS_APP_VERSION)),
+    span("German coding: Breiling et al. (2022) · Model: Howard et al. (2009)")),
+  nav_panel("Single case", value = "single",
+    intro("SINGLE CASE", "Estimate the risk of general reoffending.",
+      "Six items form the basis of the estimate. Complete the inputs and interpret the result alongside the guidance."),
+    layout_columns(col_widths = c(5, 7),
+      card(class = "input-card", card_header(h2("Case details")),
+        i18n_select_input("single_sex", "Item 1 · Sex",
+          choices = c("Please select" = "", "Male" = "m", "Female" = "f"), selected = ""),
+        number_item("single_age_last", "Item2"),
+        item_hint("Use the age at sentencing, not the age when the offence was committed."),
+        number_item("single_age_risk", "Item3"),
+        item_hint("For custodial measures, use the age at the relevant release date. ", manual_link("Details", 14)),
+        number_item("single_previous", "Item4"),
+        item_hint("Count independent previous convictions; exclude the current conviction."),
+        number_item("single_age_first", "Item5"),
+        item_hint("With no previous convictions, this equals the age at the current conviction."),
+        i18n_select_input("single_offence", "Item 6 · Principal current offence",
+          choices = c("Please select" = "", choice_offences), selected = ""),
+        item_hint("For multiple offences, use the one attracting the highest sentence. ", manual_link("Coding guidance in the manual", 16)),
+        p(class = "item-hint", "Enter ages in completed years."),
+        uiOutput("single_validation"),
+        div(class = "action-row", actionButton("single_calculate", "Calculate result", class = "btn-primary"),
+          actionButton("single_example", "Load example", class = "btn-outline-secondary")),
+        uiOutput("example_notice")
+      ),
+      div(class = "result-column",
+        uiOutput("single_results"), interpretation_note(),
+        accordion(open = FALSE,
+          accordion_panel("Measures and interpretation",
+            p("The percentages estimate general reoffending resulting in a further final conviction. The two-year estimate covers both years together."),
+            p("The Copas rate combines the extent and time span of the criminal history on a logarithmic scale. It is not a probability and can be negative."),
+            p("The model coefficients were derived from a British development sample. The German manual published in 2022 did not recalibrate them using German data. Interpret absolute percentages with appropriate caution."),
+            manual_link("Method, application and limitations", 17)))
+      )
+    )
+  ),
+  nav_panel("Dataset", value = "batch",
+    intro("BATCH PROCESSING", "From a dataset to checked results.",
+      "Choose a file, map its variables and check the data. Every row is retained in the export, including rows that cannot be scored."),
+    notice(tags$strong("Minimise the data you upload. "),
+      "Upload only the required items and, if needed, a pseudonymous case ID. Names, dates of birth and case reference numbers are not required."),
+    layout_columns(col_widths = c(5, 7),
+      card(card_header(h2("1 · Choose a file")),
+        fileInput("batch_file", "Upload dataset (maximum 10 MiB)",
+          accept = c(".xlsx", ".csv", ".txt", ".sav"), buttonLabel = "Choose file", placeholder = "No file selected"),
+        i18n_select_input("batch_format", "File format", choices = c("Detect automatically" = "auto",
+          "Excel (.xlsx)" = "xlsx", "CSV · Comma-separated" = "csv",
+          "CSV · Semicolon-separated" = "csv2", "Text · Tab-separated" = "txt", "SPSS (.sav)" = "sav")),
+        numericInput("batch_sheet", "Worksheet number (Excel only)", value = 1, min = 1, step = 1),
+        i18n_select_input("batch_decimal", "Decimal mark in numeric text", choices = c("Point" = ".", "Comma" = ",")),
+        p(class = "item-hint", "The first row must contain unique column names. Maximum 100,000 data rows."),
+        downloadButton("example_download", "Download example dataset", class = "btn-outline-secondary"),
+        uiOutput("import_message")
+      ),
+      card(card_header(h2("Preview")), p(class = "item-hint", "The first six data rows of your file."),
+        div(class = "table-scroll", tableOutput("batch_preview")))
+    ),
+    card(card_header(h2("2 · Map variables")), uiOutput("column_mapping")),
+    card(card_header(h2("3 · Map categories")),
+      p("Check the suggested mappings for sex and principal offence. Unmapped values cannot be scored. SPSS uses the stored numeric values; value labels may provide a mapping suggestion."),
+      uiOutput("category_mapping")),
+    card(card_header(h2("4 · Check data and calculate")),
+      uiOutput("batch_validation_summary"),
+      div(class = "table-scroll", tableOutput("batch_issues")),
+      actionButton("batch_calculate", "Calculate checked data", class = "btn-primary")),
+    card(card_header(h2("5 · Results and export")), uiOutput("batch_status"),
+      uiOutput("batch_summary"),
+      i18n_select_input("batch_outcome", "Display distribution", choices = c("One year" = "Prob_one_year", "Two years" = "Prob_two_years", "Copas rate" = "Copas_rate")),
+      plotOutput("batch_plot", height = "300px"), uiOutput("batch_download_control"),
+      p(class = "item-hint", "CSV uses UTF-8, commas as field separators and a decimal point. Probabilities are exported unrounded between 0 and 1. Invalid rows include a status and error explanations.")),
+    interpretation_note()
+  ),
+  nav_panel("Explore", value = "explore",
+    intro("UNDERSTAND THE MODEL", "Explore the relationships.",
+      "Vary one input and compare model estimates. These synthetic examples do not replace an individual assessment."),
+    layout_columns(col_widths = c(4, 8),
+      card(card_header(h2("Model combinations")),
+        i18n_select_input("explore_axis", "Value on the x-axis", choices = setNames(c("Item2", "Item3", "Item4", "Item5"), unname(ogrs_items[c("Item2", "Item3", "Item4", "Item5")])), selected = "Item4"),
+        sliderInput("explore_range", "Axis range", min = 0, max = 50, value = c(0, 50), step = 1),
+        i18n_select_input("explore_outcome", "Measure", choices = c("Reoffending within one year" = "Prob_one_year", "Reoffending within two years" = "Prob_two_years", "Copas rate" = "Copas_rate")),
+        checkboxGroupInput("explore_sexes", "Sex (select at least one)", choices = c("Male" = "m", "Female" = "f"), selected = "m"),
+        i18n_selectize_input("explore_offences", "Principal current offence (one to five groups)", choices = choice_offences,
+          selected = "Violence", multiple = TRUE, options = list(maxItems = 5, plugins = list("remove_button"))),
+        number_item("explore_age_last", "Item2", 20), number_item("explore_age_risk", "Item3", 20),
+        number_item("explore_previous", "Item4", 0), number_item("explore_age_first", "Item5", 20),
+        item_hint("The selected axis value replaces the corresponding fixed input. Invalid combinations are excluded.")),
+      card(card_header(h2("Model estimates")), uiOutput("explore_status"),
+        plotOutput("explore_plot", height = "520px"),
+        p(class = "item-hint", "Only whole years and whole conviction counts are scored. Age-band effects are shown as steps.")))
+  ),
+  nav_panel("Method & guidance", value = "methods",
+    intro("BACKGROUND", "Understand the method and its limits.",
+      "This app implements the German coding of the Offender Group Reconviction Scale, version 3. The German manual remains the authoritative coding reference."),
+    layout_columns(col_widths = c(7, 5),
+      card(card_header(h2("What OGRS 3 estimates")),
+        p("OGRS 3 is an actuarial tool for estimating general reoffending within one or two years. It uses six static factors and complements an individual risk assessment."),
+        p("The German version concerns reoffending resulting in a further final conviction. Administrative offences are excluded. Item 3 defines the start of the at-risk period."),
+        tags$ul(tags$li("No specific prediction of sexual or violent reoffending, or of the severity of a future offence."),
+          tags$li("Unrecorded offences are not covered."),
+          tags$li("Treatment progress and changes in dynamic risk factors are not captured."),
+          tags$li("The German version published in 2022 did not recalibrate the British coefficients. Discrimination and the accuracy of absolute probabilities are different properties."),
+          tags$li("All six items are required. The model only provides male and female categories; a missing or inapplicable category is not replaced with an assumption.")),
+        manual_link("Full application, coding and limitation guidance in the manual", 10)),
+      card(card_header(h2("Model and sources")),
+        p("The app uses the original coefficients from Howard et al. (2009), including the age bands 18–20 and 21–24. Item names and coding guidance follow Breiling et al. (2022)."),
+        p("The German coding restricts criminal history to convictions. The British original also includes cautions, reprimands and warnings. This is not a model re-estimated using German data."),
+        p(manual_link("Breiling, Dahle, Oberlader & Rettenberger (2022)"), ". BM-Online, volume 30. Kriminologische Zentralstelle."),
+        p(tags$a("Howard, Francis, Soothill & Humphreys (2009)", href = "https://www.researchgate.net/publication/258365273_OGRS3_the_revised_Offender_Group_Reconviction_Score", target = "_blank", rel = "noopener noreferrer"), ". OGRS 3: The revised Offender Group Reconviction Scale. Ministry of Justice, Research Summary 7/09."),
+        accordion(open = FALSE, accordion_panel("Difference from the 2022 Excel tool",
+          p("The official Excel tool dated 13 January 2022 assigns age 20 to the 20–24 group. The original report uses 18–20 and 21–24; this app follows the original report. The Excel tool also slightly rounds the Copas coefficient. Details and reference cases are documented in the repository."))))
+    ),
+    card(card_header(h2("Principal offence coding reference")),
+      p("Search by statutory provision or offence category. The table reproduces factual mappings from the German manual and its 2022 Excel tool; it does not replace case-specific coding decisions."),
+      textInput("offence_search", "Search, e.g. § 242 StGB", placeholder = "Enter a statutory provision or category"),
+      div(class = "table-scroll", tableOutput("offence_lookup")),
+      p(class = "item-hint", "Up to 20 matches are shown. The 2022 list is incomplete and does not reflect later legislative changes. Unlisted or ambiguous cases are not assigned automatically. ", manual_link("Manual appendix", 25))),
+    card(card_header(h2("Data processing and contact")),
+      p("Calculations run on the server, not exclusively in your browser. Inputs and uploaded files are available for processing during the session. The application code does not create a permanent case database or log case details."),
+      p("The app removes temporary uploads when a file is replaced and when the session ends, where the server can execute cleanup. A lost connection is not necessarily recognised immediately as the end of a session. Infrastructure log and backup retention depends on the hosting provider."),
+      p("For deployments on shinyapps.io, Posit documents hosting in AWS us-east-1 (USA). Those responsible for a deployment must assess its suitability for their data and use case. Self-hosted deployments have their own operating conditions."),
+      p(tags$a("Posit security information", href = "https://docs.posit.co/shinyapps.io/guide/security_and_compliance/index.html", target = "_blank", rel = "noopener noreferrer")),
+      p("Developed by Merten Neumann. Technical feedback via ", tags$a("GitHub Issues", href = "https://github.com/MertenNeumann/OGRS_Calculator/issues", target = "_blank", rel = "noopener noreferrer"), ". Please do not post personal information or original datasets there."))
+  ),
+  nav_spacer(),
+  nav_item(div(class = "language-control", i18n_select_input("language", "Language / Sprache",
+    choices = c("English" = "en", "Deutsch" = "de"), selected = "en", selectize = FALSE)))
 )
 
-##################
-###Server logic###
-##################
+server <- function(input, output, session) {
+  language <- reactive(if (identical(input$language, "de")) "de" else "en")
+  tx <- function(text) translate(text, language())
+  probabilities <- function(x) format_probability(x, language())
+  counted <- function(n, singular, plural) paste(n, tx(if (n == 1L) singular else plural))
+  render_ui <- function(expr) {
+    template <- function() NULL
+    body(template) <- substitute(expr); environment(template) <- parent.frame()
+    shiny::renderUI({ localize_ui(template(), language()) })
+  }
+  # Mapping widgets must not be rebuilt when only the display language changes.
+  render_inputs <- function(expr) {
+    template <- function() NULL
+    body(template) <- substitute(expr); environment(template) <- parent.frame()
+    shiny::renderUI({ localize_ui(template()) })
+  }
+  single_data <- reactive(data.frame(Item1 = input$single_sex %||% "", Item2 = input$single_age_last %||% NA_real_,
+    Item3 = input$single_age_risk %||% NA_real_, Item4 = input$single_previous %||% NA_real_,
+    Item5 = input$single_age_first %||% NA_real_, Item6 = input$single_offence %||% "", stringsAsFactors = FALSE))
+  single_saved <- reactiveVal(NULL)
+  example_loaded <- reactiveVal(FALSE)
+  observeEvent(input$single_example, {
+    example_loaded(TRUE)
+    updateSelectInput(session, "single_sex", selected = "m")
+    updateNumericInput(session, "single_age_last", value = 20)
+    updateNumericInput(session, "single_age_risk", value = 20)
+    updateNumericInput(session, "single_previous", value = 0)
+    updateNumericInput(session, "single_age_first", value = 20)
+    updateSelectInput(session, "single_offence", selected = "Violence")
+  })
+  output$example_notice <- render_ui({
+    example <- data.frame(Item1 = "m", Item2 = 20, Item3 = 20, Item4 = 0, Item5 = 20, Item6 = "Violence")
+    if (example_loaded() && isTRUE(all.equal(single_data(), example))) {
+      item_hint("Example loaded: male, ages 20/20/20, no previous convictions, principal offence Violence. Check before calculating.")
+    }
+  })
+  observeEvent(input$single_calculate, {
+    data <- single_data()
+    if (!nrow(validate_ogrs(data))) single_saved(list(data = data, scores = ogrs(Data = data), time = Sys.time()))
+  })
+  output$single_validation <- render_ui({
+    if (is.null(input$single_calculate) || input$single_calculate == 0L) return(NULL)
+    issues <- validate_ogrs(single_data())
+    if (nrow(issues)) notice(tags$strong("Please check the inputs"),
+      tags$ul(lapply(seq_len(nrow(issues)), function(i) tags$li(paste0(item_labels(language())[issues$field[i]], ": ", tx(issues$message[i]))))), type = "warning")
+  })
+  single_ready <- reactive({
+    saved <- single_saved()
+    !is.null(saved) && identical(saved$data, single_data()) && !nrow(validate_ogrs(single_data()))
+  })
+  output$single_results <- render_ui({
+    if (!single_ready()) return(card(class = "empty-result", card_header(h2("Your result")),
+      h3(if (is.null(single_saved())) "Ready when your inputs are complete." else "Inputs changed."),
+      p(if (is.null(single_saved())) "Complete all six items and start the calculation." else "Check the inputs and calculate again. Previous results are hidden.")))
+    saved <- single_saved(); score <- saved$scores
+    card(class = "result-card", card_header(h2("Estimated general reoffending")),
+      div(class = "probability-grid",
+        div(class = "probability", span("Within one year"), strong(id = "prob_one", probabilities(score$Prob_one_year))),
+        div(class = "probability", span("Within two years"), strong(id = "prob_two", probabilities(score$Prob_two_years)))),
+      p(class = "item-hint", "Both periods start at the age specified in Item 3. Displayed estimates are rounded; calculation and export use unrounded values."),
+      p(class = "copas-value", "Copas rate: ", strong(id = "copas_value", format_copas(score$Copas_rate, language()))),
+      div(class = "result-meta", paste(tx("Calculated:"), format_local_time(saved$time, language()))),
+      accordion(open = FALSE, accordion_panel("Inputs used", tableOutput("single_input_summary"))),
+      downloadButton("single_download", "Download result as CSV", class = "btn-outline-primary"))
+  })
+  output$single_input_summary <- renderTable({
+    req(single_ready()); data <- single_saved()$data
+    values <- as.character(data[1, ])
+    values[1] <- tx(if (data$Item1 == "m") "Male" else "Female")
+    values[6] <- offence_labels(language())[match(data$Item6, ogrs_offences$code)]
+    setNames(data.frame(Item = unname(item_labels(language())), Value = values), tx(c("Item", "Value")))
+  }, rownames = FALSE)
+  output$single_download <- downloadHandler(filename = function() "OGRS3_Single_case.csv", content = function(file) {
+    req(single_ready())
+    saved <- single_saved()
+    export <- make_ogrs_export(saved$data, saved$scores, validate_ogrs(saved$data), timestamp = saved$time)
+    write.csv(cbind(saved$data, export), file, row.names = FALSE, na = "", fileEncoding = "UTF-8")
+  })
 
-server <- function(input, output) {
-  
-  #Outputs single calculation
-  output$risk_text1 <- renderText({
-    
-    item1_clean <- unname(Lookup_item1[input$item1])
-    
-    item6_clean <- unname(Lookup_item6[input$item6])
-    
-    Help1 <- ogrs(Data = NA, Item1 = item1_clean, Item2 = input$item2, Item3 = input$item3, Item4 = input$item4, Item5 = input$item5, Item6 = item6_clean)
-    
-    paste(c("One year = ", round(Help1[1] * 100, digits = 2), "%"), collapse = "")
+  uploaded_paths <- character()
+  cleanup_upload <- function(paths) {
+    base <- paste0(normalizePath(tempdir(), mustWork = TRUE), .Platform$file.sep)
+    for (path in paths) {
+      resolved <- normalizePath(path, mustWork = FALSE)
+      if (startsWith(resolved, base) && file.exists(resolved) && !dir.exists(resolved)) unlink(resolved)
+    }
+  }
+  observeEvent(input$batch_file, {
+    path <- input$batch_file$datapath
+    cleanup_upload(setdiff(uploaded_paths, path))
+    uploaded_paths <<- union(uploaded_paths, path)
+  }, ignoreNULL = FALSE)
+  session$onSessionEnded(function() cleanup_upload(uploaded_paths))
 
-    
+  imported <- reactive({
+    if (is.null(input$batch_file)) return(list(data = NULL, error = NULL))
+    tryCatch(list(data = read_ogrs_file(input$batch_file$datapath, input$batch_format %||% "auto",
+      input$batch_file$name, input$batch_sheet %||% 1L), error = NULL),
+      error = function(e) list(data = NULL, error = "The file could not be read. Check the format, worksheet, unique column names and file size."))
   })
-  
-  output$risk_text2 <- renderText({
-    
-    item1_clean <- unname(Lookup_item1[input$item1])
-    
-    item6_clean <- unname(Lookup_item6[input$item6])
-    
-    Help2 <- ogrs(Data = NA, Item1 = item1_clean, Item2 = input$item2, Item3 = input$item3, Item4 = input$item4, Item5 = input$item5, Item6 = item6_clean)
-    
-    paste(c("Two years = ", round(Help2[2] * 100, digits = 2), "%"), collapse = "")
-
-    
+  output$import_message <- render_ui({
+    x <- imported()
+    if (!is.null(x$error)) notice(tx(x$error), type = "warning")
+    else if (!is.null(x$data)) item_hint(paste(counted(nrow(x$data), "data row", "data rows"), "·", counted(ncol(x$data), "column", "columns")))
   })
-  
-  output$risk_text3 <- renderText({
-    
-    item1_clean <- unname(Lookup_item1[input$item1])
-    
-    item6_clean <- unname(Lookup_item6[input$item6])
-    
-    Help3 <- ogrs(Data = NA, Item1 = item1_clean, Item2 = input$item2, Item3 = input$item3, Item4 = input$item4, Item5 = input$item5, Item6 = item6_clean)
-    
-    paste(c("Copas rate = ", round(Help3[3], digits = 2)), collapse = "")
-
-  })
-    
-  #Compute OGRS on dataset
-  Dist_risk <- eventReactive(input$calc, {
-    
-    req(input$ogrs_input)
-    
-    Var_idx <- c(input$nameitem1, input$nameitem2, input$nameitem3, input$nameitem4, input$nameitem5, input$nameitem6)
-    
-    #xlsx
-    if(input$data_format == "xlsx (Excel)") {
-      
-      ogrsData_raw <- read_excel(input$ogrs_input$datapath) %>% 
-        dplyr::select(all_of(Var_idx)) %>% 
-        as.data.frame()
-      
-      names(ogrsData_raw) <- c("Item1", "Item2", "Item3", "Item4", "Item5", "Item6")
-      
-    }
-    
-    #csv
-    if(input$data_format == "csv") {
-      
-      ogrsData_raw <- read_csv(input$ogrs_input$datapath) %>% 
-        dplyr::select(all_of(Var_idx)) %>% 
-        as.data.frame()
-      
-      names(ogrsData_raw) <- c("Item1", "Item2", "Item3", "Item4", "Item5", "Item6")
-      
-    }
-    
-    #csv2
-    if(input$data_format == "csv (European)") {
-      
-      ogrsData_raw <- read_csv2(input$ogrs_input$datapath) %>% 
-        dplyr::select(all_of(Var_idx)) %>% 
-        as.data.frame()
-      
-      names(ogrsData_raw) <- c("Item1", "Item2", "Item3", "Item4", "Item5", "Item6")
-      
-    }
-    
-    #txt
-    if(input$data_format == "txt") {
-      
-      ogrsData_raw <- read_delim(input$ogrs_input$datapath) %>% 
-        dplyr::select(all_of(Var_idx)) %>% 
-        as.data.frame()
-      
-      names(ogrsData_raw) <- c("Item1", "Item2", "Item3", "Item4", "Item5", "Item6")
-      
-    }
-    
-    #sav  
-    if(input$data_format == "sav (SPSS)") {
-      
-      ogrsData_raw <- read_sav(input$ogrs_input$datapath) %>% 
-        dplyr::select(all_of(Var_idx)) %>% 
-        as.data.frame()
-      
-      names(ogrsData_raw) <- c("Item1", "Item2", "Item3", "Item4", "Item5", "Item6")
-      
-    }
-    
-    #Change labels
-    ogrsData <- ogrsData_raw %>% 
-      mutate(Item1 = as.character(Item1)) %>% 
-      mutate(Item1 = case_when(Item1 == input$labelitem1_1 ~ "m", Item1 == input$labelitem1_2 ~ "f")) %>%
-      mutate(Item6 = as.character(Item6)) %>% 
-      mutate(Item6 = case_when(Item6 == input$labelitem6_1 ~ "Violence",
-                               Item6 == input$labelitem6_2 ~ "Robbery",
-                               Item6 == input$labelitem6_3 ~ "Public_order",
-                               Item6 == input$labelitem6_4 ~ "Sexual_no_child",
-                               Item6 == input$labelitem6_5 ~ "Sexual_child",
-                               Item6 == input$labelitem6_6 ~ "Soliciting_Prostitution",
-                               Item6 == input$labelitem6_7 ~ "Burglary_domestic",
-                               Item6 == input$labelitem6_8 ~ "Burglary_other",
-                               Item6 == input$labelitem6_9 ~ "Theft_non_motor",
-                               Item6 == input$labelitem6_10 ~ "Handling_Stolen_Goods",
-                               Item6 == input$labelitem6_11 ~ "Fraud_Forgery",
-                               Item6 == input$labelitem6_12 ~ "Absconding_Bail_Offences",
-                               Item6 == input$labelitem6_13 ~ "Taking_Driving",
-                               Item6 == input$labelitem6_14 ~ "Theft_from_Vehicle",
-                               Item6 == input$labelitem6_15 ~ "Other_motoring",
-                               Item6 == input$labelitem6_16 ~ "Drink_Driving",
-                               Item6 == input$labelitem6_17 ~ "Criminal_Damage",
-                               Item6 == input$labelitem6_18 ~ "Drug_import_export_production",
-                               Item6 == input$labelitem6_19 ~ "Drug_possession_supply",
-                               Item6 == input$labelitem6_20 ~ "Other"))
-    
-    #Compute scores
-    ogrsData_out <- ogrs(Data = ogrsData, Shiny_Progress = TRUE)
-    
-    ogrsData_out
-    
-    
-  })
-  
-  #Display distribution of computed scores
-  output$Distplot <- renderPlot({
-    
-    Data_Plot <- Dist_risk()
-    Column_Plot <- input$risk_idx
-    
-    ggplot(data = Data_Plot, aes_string(x = Column_Plot)) +
-      geom_histogram(aes(y = ..density..), fill = "lightgrey", color = "black") +
-      geom_density(color = "red") +
-      annotate("text", x = Inf, y = Inf, hjust = 1, vjust = 1, size = 7, 
-               label = paste0("N = ", nrow(Data_Plot), "\n",
-                              "NA = ", sum(is.na(Data_Plot[, Column_Plot])), " (", round((sum(is.na(Data_Plot[, Column_Plot]))/nrow(Data_Plot)) * 100, digits = 1), "%)", "\n",
-                              "M = ", round(mean(Data_Plot[, Column_Plot], na.rm = TRUE), digits = 2), "\n",
-                              "Med = ", round(median(Data_Plot[, Column_Plot], na.rm = TRUE), digits = 2), "\n",
-                              "SD = ", round(sd(Data_Plot[, Column_Plot], na.rm = TRUE), digits = 2))) +
-      xlab(input$risk_idx) +
-      theme_classic(base_size = 18)
-    
-  })
-  
-  #Download dataset
-  output$downloadData <- downloadHandler(
-    filename = "OGRS_Output.csv",
-    content = function(file) {
-      
-      req(input$ogrs_input)
-      
-      Var_idx <- c(input$nameitem1, input$nameitem2, input$nameitem3, input$nameitem4, input$nameitem5, input$nameitem6)
-      
-      Data_Download <- Dist_risk()
-      
-      write.csv2(Data_Download, file, row.names = FALSE)
-      
+  output$batch_preview <- renderTable({ req(imported()$data); head(imported()$data, 6L) }, rownames = FALSE)
+  output$column_mapping <- render_inputs({
+    data <- imported()$data
+    if (is.null(data)) return(p("Upload a valid file first."))
+    choices <- c("Please select" = "", setNames(names(data), names(data)))
+    controls <- lapply(seq_along(ogrs_items), function(i) {
+      key <- names(ogrs_items)[i]
+      selected <- if (key %in% names(data)) key else ""
+      i18n_select_input(paste0("column_", i), paste0("Item ", i, " · ", ogrs_items[i]), choices, selected)
     })
-  
-  #Produce plots to investigate OGRS scores
-  output$Explore_Plot <- renderPlot({
-    
-    plotInputList <- list("Item1" = input$checkItem1, "Item2" = input$slideItem2, "Item3" = input$slideItem3, 
-                          "Item4" = input$slideItem4, "Item5" = input$slideItem5, "Item6" = input$checkItem6)
-    
-    #Multiple Groups Item 1 & Item 6
-    if(length(input$checkItem1) > 1 & length(input$checkItem6) > 1) {
-      
-      if(input$inputX == "Item2" | input$inputX == "Item3" | input$inputX == "Item5"){
-        
-        plotInputList[[input$inputX]] <- c(14:90)
-        
-      }
-      if(input$inputX == "Item4"){
-        
-        plotInputList[[input$inputX]] <- c(0:50)
-        
-      }
-      
-      PlotData_base <- expand.grid(plotInputList)
-      
-      PlotData_ogrs <- ogrs(Data = PlotData_base, Shiny_Progress = TRUE)
-      
-      PlotData <- cbind(PlotData_base, PlotData_ogrs)
-      ##############
-      
-      Exp_Plot1 <- ggplot(data = PlotData, aes_string(x = input$inputX, y = "Copas_rate")) +
-        geom_line(size = 0.75) +
-        ylab("Copas rate") +
-        xlab(Lookup_names[input$inputX]) +
-        theme_classic(base_size = 18)
-      
-      Exp_Plot2 <- ggplot(data = PlotData, aes_string(x = input$inputX, y = "Prob_one_year")) +
-        geom_line(aes(color = Item6), size = 0.75) +
-        facet_grid(rows = vars(Item1), labeller = function(variable, value) {return(list("m" = "Male", "f" = "Female")[value])}) +
-        ylab("Predicted probability (One year)") +
-        xlab(Lookup_names[input$inputX]) +
-        scale_color_brewer(palette = "Dark2", name = NULL, labels = Lookup_item6_2[input$checkItem6]) +
-        theme_classic(base_size = 18)
-      
+    tagList(div(class = "form-grid", controls),
+      i18n_select_input("batch_id", "Optional pseudonymous case ID", choices = c("Use the sequential row number only" = "", names(data)), selected = ""))
+  })
+  selected_columns <- reactive(vapply(seq_along(ogrs_items), function(i) input[[paste0("column_", i)]] %||% "", character(1)))
+  mapping_values <- reactive({
+    data <- imported()$data; columns <- selected_columns()
+    if (is.null(data) || any(!columns %in% names(data)) || anyDuplicated(columns)) return(NULL)
+    list(sex = observed_values(data[[columns[1]]]), offence = observed_values(data[[columns[6]]]))
+  })
+  output$category_mapping <- render_inputs({
+    values <- mapping_values()
+    if (is.null(values)) return(p("Map each of the six variables to a distinct column first."))
+    if (any(lengths(values) > 100L)) return(notice("More than 100 distinct categories: check the column mapping.", type = "warning"))
+    data <- imported()$data; columns <- selected_columns()
+    controls <- function(kind, choices, col) lapply(seq_along(values[[kind]]), function(i) {
+      value <- values[[kind]][i]
+      default <- default_category(value, kind, attr(data[[col]], "labels"))
+      i18n_select_input(mapping_input_id(kind, col, value), tagList(localize_ui("Value:"), " ", span(value, `data-i18n-raw` = "true")), c("Not mapped" = "", choices), selected = default)
+    })
+    layout_columns(col_widths = c(4, 8),
+      div(h3("Sex"), div(class = "mapping-grid", controls("sex", c("Male" = "m", "Female" = "f"), columns[1]))),
+      div(h3("Principal current offence"), div(class = "mapping-grid", controls("offence", choice_offences, columns[6]))))
+  })
+  current_spec <- reactive({
+    values <- mapping_values()
+    maps <- function(kind) {
+      if (is.null(values) || length(values[[kind]]) > 100L) return(character())
+      column <- selected_columns()[if (kind == "sex") 1L else 6L]
+      setNames(vapply(values[[kind]], function(value) input[[mapping_input_id(kind, column, value)]] %||% "", character(1)), values[[kind]])
     }
-    
-    #Multiple Groups Item 1
-    if(length(input$checkItem1) > 1 & length(input$checkItem6) == 1) {
-      
-      if(input$inputX == "Item2" | input$inputX == "Item3" | input$inputX == "Item5"){
-        
-        plotInputList[[input$inputX]] <- c(14:90)
-        
+    list(file = if (is.null(input$batch_file)) NULL else as.list(input$batch_file),
+      format = input$batch_format %||% "auto", sheet = input$batch_sheet %||% 1L,
+      decimal = input$batch_decimal %||% ".", columns = selected_columns(),
+      sex_map = maps("sex"), offence_map = maps("offence"), id = input$batch_id %||% "")
+  })
+  batch_prepared <- reactive({
+    raw <- imported()$data; spec <- current_spec(); values <- mapping_values()
+    if (is.null(raw)) return(list(data = NULL, error = "Please upload a valid file."))
+    if (is.null(values) || any(lengths(values) > 100L)) return(list(data = NULL, error = "Please check the column and category mappings."))
+    tryCatch({
+      data <- prepare_ogrs_data(raw, spec$columns, spec$sex_map, spec$offence_map, spec$decimal)
+      if (nzchar(spec$id)) {
+        if (!spec$id %in% names(raw)) stop("Please select an existing ID column.")
+        id <- as.character(raw[[spec$id]])
+        if (anyNA(id) || any(!nzchar(trimws(id))) || anyDuplicated(id)) stop("Case IDs must be present and unique in every row.")
       }
-      if(input$inputX == "Item4"){
-        
-        plotInputList[[input$inputX]] <- c(0:50)
-        
-      }
-      
-      PlotData_base <- expand.grid(plotInputList)
-      
-      PlotData_ogrs <- ogrs(Data = PlotData_base, Shiny_Progress = TRUE)
-      
-      PlotData <- cbind(PlotData_base, PlotData_ogrs)
-      ##############
-      
-      Exp_Plot1 <- ggplot(data = PlotData, aes_string(x = input$inputX, y = "Copas_rate")) +
-        geom_line(size = 0.75) +
-        ylab("Copas rate") +
-        xlab(Lookup_names[input$inputX]) +
-        theme_classic(base_size = 18)
-      
-      Exp_Plot2 <- ggplot(data = PlotData, aes_string(x = input$inputX, y = "Prob_one_year")) +
-        geom_line(aes(color = Item1), size = 0.75) +
-        ylab("Predicted probability (One year)") +
-        xlab(Lookup_names[input$inputX]) +
-        scale_color_brewer(palette = "Dark2", name = NULL, labels = c("Male", "Female")) +
-        theme_classic(base_size = 18)
-      
+      list(data = data, issues = validate_ogrs(data), error = NULL)
+    }, error = function(e) list(data = NULL, error = conditionMessage(e)))
+  })
+  output$batch_validation_summary <- render_ui({
+    x <- batch_prepared()
+    if (is.null(x$data)) return(notice(tx(x$error)))
+    bad <- length(unique(x$issues$row)); good <- nrow(x$data) - bad
+    notice(tags$strong(paste(counted(good, "scoreable row", "scoreable rows"), "·", counted(bad, "unscoreable row", "unscoreable rows"))),
+      if (bad) " Invalid rows are retained in the export with status and error explanations. Check the mappings and inputs." else " All data rows pass the input checks.",
+      type = if (bad) "warning" else "success")
+  })
+  issue_table <- function(issues) {
+    setNames(data.frame(Row = issues$row, Item = unname(item_labels(language())[issues$field]), Issue = tx(issues$message)), tx(c("Row", "Item", "Issue")))
+  }
+  output$batch_issues <- renderTable({
+    x <- batch_prepared(); req(x$data)
+    if (!nrow(x$issues)) return(NULL)
+    head(issue_table(x$issues), 30L)
+  }, rownames = FALSE)
+  batch_saved <- reactiveVal(NULL)
+  observeEvent(input$batch_calculate, {
+    x <- batch_prepared()
+    if (is.null(x$data)) return(showNotification(tx(x$error), type = "warning"))
+    if (length(unique(x$issues$row)) == nrow(x$data)) {
+      return(showNotification(tx("No rows can be scored. Please review the error explanations."), type = "warning"))
     }
-    
-    #Multiple Groups Item 6
-    if(length(input$checkItem1) == 1 & length(input$checkItem6) > 1) {
-      
-      if(input$inputX == "Item2" | input$inputX == "Item3" | input$inputX == "Item5"){
-        
-        plotInputList[[input$inputX]] <- c(14:90)
-        
-      }
-      if(input$inputX == "Item4"){
-        
-        plotInputList[[input$inputX]] <- c(0:50)
-        
-      }
-      
-      PlotData_base <- expand.grid(plotInputList)
-      
-      PlotData_ogrs <- ogrs(Data = PlotData_base, Shiny_Progress = TRUE)
-      
-      PlotData <- cbind(PlotData_base, PlotData_ogrs)
-      ##############
-      
-      Exp_Plot1 <- ggplot(data = PlotData, aes_string(x = input$inputX, y = "Copas_rate")) +
-        geom_line(size = 0.75) +
-        ylab("Copas rate") +
-        xlab(Lookup_names[input$inputX]) +
-        theme_classic(base_size = 18)
-      
-      Exp_Plot2 <- ggplot(data = PlotData, aes_string(x = input$inputX, y = "Prob_one_year")) +
-        geom_line(aes(color = Item6), size = 0.75) +
-        ylab("Predicted probability (One year)") +
-        xlab(Lookup_names[input$inputX]) +
-        scale_color_brewer(palette = "Dark2", name = NULL, labels = Lookup_item6_2[input$checkItem6]) +
-        theme_classic(base_size = 18)
-      
+    spec <- current_spec(); raw <- imported()$data
+    scores <- ogrs(Data = x$data, strict = FALSE)
+    time <- Sys.time()
+    export <- make_ogrs_export(x$data, scores, x$issues,
+      ids = if (nzchar(spec$id)) raw[[spec$id]] else NULL, timestamp = time, filename = input$batch_file$name)
+    batch_saved(list(spec = spec, data = x$data, scores = scores, issues = x$issues, time = time, export = export))
+  })
+  batch_ready <- reactive(same_batch_spec(if (is.null(batch_saved())) NULL else batch_saved()$spec, current_spec()))
+  output$batch_status <- render_ui({
+    saved <- batch_saved()
+    if (is.null(saved)) return(notice("No calculation yet. Check the file and mappings, then start the calculation."))
+    if (!batch_ready()) return(notice(tags$strong("Results out of date. "),
+      "The file or import settings have changed. Calculate again; downloading is disabled until then.", type = "warning"))
+    notice(paste0(tx("Calculated: "), saved$spec$file$name, " · ", format_local_time(saved$time, language())), type = "success")
+  })
+  output$batch_summary <- render_ui({
+    req(batch_ready()); x <- batch_saved()
+    good <- sum(x$export$Status == "calculated")
+    tagList(p(tags$strong(paste(good, tx("of"), counted(nrow(x$data), "row calculated.", "rows calculated.")))),
+      div(class = "table-scroll", tableOutput("batch_result_preview")))
+  })
+  output$batch_result_preview <- renderTable({
+    req(batch_ready()); x <- batch_saved()$export
+    setNames(data.frame(Row = head(x$Row, 6), Status = tx(ifelse(head(x$Status, 6) == "calculated", "Calculated", "Not calculable")),
+      One_year = probabilities(head(x$Prob_one_year, 6)),
+      Two_years = probabilities(head(x$Prob_two_years, 6))), tx(c("Row", "Status", "One year", "Two years")))
+  }, rownames = FALSE)
+  output$batch_download_control <- render_ui({
+    if (batch_ready()) downloadButton("batch_download", "Download results", class = "btn-primary")
+    else tags$button("Download available after an up-to-date calculation", class = "btn btn-secondary", disabled = "disabled")
+  })
+  output$batch_download <- downloadHandler(filename = function() "OGRS3_Results.csv", content = function(file) {
+    req(batch_ready())
+    write.csv(batch_saved()$export, file, row.names = FALSE, na = "", fileEncoding = "UTF-8")
+  })
+  output$example_download <- downloadHandler(filename = function() "OGRS3_Example_data.csv", content = function(file) {
+    file.copy(file.path(.app_root, "examples/example-data.csv"), file, overwrite = TRUE)
+  })
+  output$batch_plot <- renderPlot({
+    validate(need(batch_ready(), tx("The distribution appears after an up-to-date calculation.")))
+    key <- input$batch_outcome %||% "Prob_one_year"
+    req(key %in% c("Prob_one_year", "Prob_two_years", "Copas_rate"))
+    values <- batch_saved()$scores[[key]]; values <- values[is.finite(values)]
+    validate(need(length(values) > 0, tx("No scoreable values are available.")))
+    data <- data.frame(Value = values)
+    plot <- ggplot(data, aes(x = Value)) + geom_histogram(aes(y = after_stat(density)),
+      bins = min(30L, max(1L, ceiling(sqrt(length(values))))), fill = "#cce2df", colour = "white") +
+      labs(x = tx(if (key == "Copas_rate") "Copas rate" else "Estimated general reoffending"), y = tx("Density"),
+        subtitle = paste(tx("Scoreable cases:"), length(values))) + theme_minimal(base_size = 13)
+    if (length(unique(values)) >= 2L) plot <- plot + geom_density(colour = "#156f6a", linewidth = 0.8,
+      bounds = if (key == "Copas_rate") c(-Inf, Inf) else c(0, 1))
+    if (key != "Copas_rate") plot <- plot + scale_x_continuous(labels = probabilities) + coord_cartesian(xlim = c(0, 1))
+    plot
+  }, alt = reactive(tx("Distribution of scoreable OGRS 3 values. The subtitle gives the number of valid cases.")))
+
+  observeEvent(input$explore_axis, {
+    count <- identical(input$explore_axis, "Item4")
+    updateSliderInput(session, "explore_range", min = if (count) 0 else 10,
+      max = if (count) 100 else 120, value = if (count) c(0, 50) else c(14, 90), step = 1)
+  })
+  explored <- reactive({
+    tryCatch(make_explore_data(input$explore_axis %||% "Item4", input$explore_range %||% c(0, 50),
+      input$explore_sexes %||% character(), input$explore_offences %||% character(),
+      list(Item2 = input$explore_age_last %||% NA_real_, Item3 = input$explore_age_risk %||% NA_real_,
+        Item4 = input$explore_previous %||% NA_real_, Item5 = input$explore_age_first %||% NA_real_)),
+      error = function(e) list(error = conditionMessage(e)))
+  })
+  output$explore_status <- render_ui({
+    x <- explored()
+    if (!is.null(x$error)) return(notice(tx(x$error), type = "warning"))
+    if (!nrow(x$data)) return(notice("No valid combinations. Adjust the ages, conviction count or axis range.", type = "warning"))
+    notice(paste(counted(nrow(x$data), "valid model combination", "valid model combinations"), "·", counted(x$excluded, "invalid combination excluded.", "invalid combinations excluded.")))
+  })
+  output$explore_plot <- renderPlot({
+    x <- explored()
+    validate(need(is.null(x$error), tx(x$error %||% "Please check the inputs.")))
+    validate(need(nrow(x$data) > 0, tx("No valid model combinations.")))
+    data <- x$data; axis <- input$explore_axis %||% "Item4"; key <- input$explore_outcome %||% "Prob_one_year"
+    req(key %in% c("Prob_one_year", "Prob_two_years", "Copas_rate"))
+    data$Sex <- tx(ifelse(data$Item1 == "m", "Male", "Female"))
+    data$Offence <- factor(data$Item6, levels = ogrs_offences$code, labels = offence_labels(language()))
+    data$Group <- interaction(data$Item1, data$Item6, drop = TRUE)
+    line_data <- data[ave(seq_len(nrow(data)), data$Group, FUN = length) > 1L, , drop = FALSE]
+    plot <- ggplot(data, aes(x = .data[[axis]], y = .data[[key]], colour = Offence, group = Group)) +
+      geom_point(size = 1.4) + labs(x = item_labels(language())[[axis]],
+        y = tx(switch(key, Prob_one_year = "General reoffending · one year", Prob_two_years = "General reoffending · two years", Copas_rate = "Copas rate")), colour = NULL) +
+      scale_colour_brewer(palette = "Dark2", drop = TRUE) + theme_minimal(base_size = 13) +
+      theme(legend.position = "bottom", legend.text = element_text(size = 10)) + guides(colour = guide_legend(ncol = 1))
+    if (nrow(line_data)) {
+      if (axis == "Item3") plot <- plot + geom_step(data = line_data, linewidth = 0.7, direction = "hv")
+      else plot <- plot + geom_line(data = line_data, linewidth = 0.7)
     }
-    
-    #One group
-    if(length(input$checkItem1) == 1 & length(input$checkItem6) == 1) {
-      
-      if(input$inputX == "Item2" | input$inputX == "Item3" | input$inputX == "Item5"){
-        
-        plotInputList[[input$inputX]] <- c(14:90)
-        
-      }
-      if(input$inputX == "Item4"){
-        
-        plotInputList[[input$inputX]] <- c(0:50)
-        
-      }
-      
-      PlotData_base <- expand.grid(plotInputList)
-      
-      PlotData_ogrs <- ogrs(Data = PlotData_base, Shiny_Progress = TRUE)
-      
-      PlotData <- cbind(PlotData_base, PlotData_ogrs)
-      ##############
-      
-      Exp_Plot1 <- ggplot(data = PlotData, aes_string(x = input$inputX, y = "Copas_rate")) +
-        geom_line(size = 0.75) +
-        ylab("Copas rate") +
-        xlab(Lookup_names[input$inputX]) +
-        theme_classic(base_size = 18)
-      
-      Exp_Plot2 <- ggplot(data = PlotData, aes_string(x = input$inputX, y = "Prob_one_year")) +
-        geom_line(size = 0.75) +
-        ylab("Predicted probability (One year)") +
-        xlab(Lookup_names[input$inputX]) +
-        theme_classic(base_size = 18)
-      
-    }
-    
-    Exp_Plot <- ggarrange(Exp_Plot1, Exp_Plot2, nrow = 2, heights = c(1, 1.5))
-    
-    Exp_Plot
-    
-  }, height = 700)
+    if (key != "Copas_rate") plot <- plot + scale_y_continuous(labels = probabilities, limits = c(0, 1))
+    if (length(unique(data$Sex)) > 1L) plot <- plot + facet_wrap(vars(Sex), ncol = 1)
+    plot
+  }, alt = reactive(tx("OGRS 3 model estimates across the selected axis range. Invalid combinations are excluded.")))
+
+  lookup <- read.csv(file.path(.app_root, "data/offence-mapping.csv"), stringsAsFactors = FALSE, fileEncoding = "UTF-8")
+  output$offence_lookup <- renderTable({
+    query <- trimws(tolower(input$offence_search %||% ""))
+    english_categories <- english_manual_category(lookup$Manual_category)
+    matches <- if (!nzchar(query)) seq_len(min(5L, nrow(lookup))) else
+      which(grepl(query, tolower(paste(lookup$Provision, lookup$Manual_category, english_categories)), fixed = TRUE))
+    if (!length(matches)) return(setNames(data.frame(Issue = tx("No match. Please consult the full coding reference in the manual.")), tx("Issue")))
+    matches <- head(matches, 20L)
+    if (language() == "de") return(setNames(lookup[matches, , drop = FALSE], c("Vorschrift", "Manualkategorie")))
+    data.frame(`Statutory provision` = lookup$Provision[matches], Category = english_categories[matches],
+      `Manual category (German)` = lookup$Manual_category[matches], check.names = FALSE)
+  }, rownames = FALSE, colnames = TRUE)
 }
 
-#########################
-###Run the application###
-#########################
-
-shinyApp(ui = ui, server = server)
+# Local null fallback, independent of internal Shiny operators.
+`%||%` <- function(x, y) if (is.null(x)) y else x
+shinyApp(ui = localize_ui(ui), server = server)

@@ -1,0 +1,3 @@
+# Keep reference tables portable and workbooks binary.
+*.csv text eol=lf
+*.xlsx binary

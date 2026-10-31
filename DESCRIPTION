@@ -1,0 +1,27 @@
+Package: OGRSCalculator
+Type: Project
+Title: Bilingual Shiny Calculator for the Offender Group Reconviction Scale 3
+Version: 2.1.0
+Authors@R: person("Merten", "Neumann", role = c("aut", "cre"))
+Description: Scoring, input validation, dataset processing and visualisation
+    of OGRS 3 using the German coding by Breiling et al. (2022) and model
+    coefficients by Howard et al. (2009). English is the default interface
+    language, with a session-local German language selector.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.6.2)
+Imports:
+    bslib (>= 0.12.0),
+    digest,
+    ggplot2 (>= 4.0.3),
+    haven (>= 2.5.5),
+    htmltools,
+    jsonlite,
+    readr (>= 2.2.0),
+    readxl (>= 1.6.0),
+    shiny (>= 1.14.0)
+Suggests:
+    renv (>= 1.3.1),
+    testthat (>= 3.3.2),
+    withr
+Config/testthat/edition: 3

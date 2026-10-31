@@ -1,0 +1,12 @@
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+renv/library/
+renv/staging/
+renv/cache/
+renv/cellar/
+*.log
+playwright-report/
+test-results/
+__pycache__/
