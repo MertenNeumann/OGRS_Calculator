@@ -17,48 +17,31 @@ of violent or sexual reoffending. The manual remains the full coding reference.
 
 ## Installation and startup
 
-Tested toolchain, 31 October 2026: **R 4.6.2**, Shiny 1.14.0, bslib 0.12.0,
-ggplot2 4.0.3, haven 2.5.5, readxl 1.6.0 and readr 2.2.0. Exact versions of all
-75 dependencies, including the development tools, are recorded in `renv.lock`.
-`.R-version` pins the R version.
+Use **R 4.6.2** and the package versions recorded in `renv.lock`.
+`.R-version` records the supported R version. From the repository root, run:
 
-1. Install R 4.6.2, for example from [CRAN](https://cran.r-project.org/).
-2. Restore the locked packages from the repository root:
-
-   ```sh
-   Rscript --vanilla scripts/setup.R
-   ```
-
-3. Start the application:
-
-   ```sh
-   Rscript scripts/run.R
-   ```
-
-Alternatively, from an R session in the repository root:
-
-```r
-shiny::runApp(".", host = "127.0.0.1", port = 3838, launch.browser = TRUE)
+```sh
+Rscript --vanilla scripts/setup.R
+Rscript scripts/run.R
 ```
 
-`.Rprofile` activates the project library. Installation requires access to CRAN
-and, when compiling from source on Linux, compilers and development libraries.
-On Debian/Ubuntu these include `build-essential`, `gfortran`, `cmake`,
-`pkg-config`, `zlib1g-dev`, `libuv1-dev` and `libx11-dev`. The application itself
-does not require an external database or API credentials.
+The setup script restores the project library, including test dependencies.
+`.Rprofile` activates that library when R starts in the repository root.
+Installation requires access to CRAN. Linux source installations also require
+compilers and development libraries; see [Contributing](CONTRIBUTING.md).
+No external database or API credentials are required for local calculations.
 
-`scripts/run.R` accepts `OGRS_HOST` and `OGRS_PORT`; it defaults to a local
-binding at 127.0.0.1:3838. A server deployment needs its own network, HTTPS
-and access-control configuration.
+The default local address is `127.0.0.1:3838`. Set `OGRS_PORT` to use another
+port and `OGRS_HOST` to change the bind address. When running both calculators
+at once, use different ports. See [Data processing and deployment](docs/DATA_AND_DEPLOYMENT.md)
+for hosting requirements.
 
 ## Interface and language selection
 
 - **Single case:** Complete the six items or explicitly load an example. Results
-  only appear after a valid calculation. Editing inputs hides previous results
-  and disables their export until recalculation.
+  only appear after a valid calculation.
 - **Dataset:** Upload a file, inspect the preview, map columns and categories,
-  review validation issues, then calculate. Changes to the file, worksheet,
-  import settings, mappings or case ID invalidate previous results and downloads.
+  review validation issues, then calculate.
 - **Explore:** Compare whole-number ranges across up to five offence groups.
   Invalid combinations are excluded and counted. Choose the one-year estimate,
   two-year estimate or Copas rate.
@@ -70,15 +53,15 @@ and access-control configuration.
 In German, these tabs are labelled **Einzelfall**, **Datensatz**, **Ausprobieren**,
 **Methodische Hinweise** and **Über die App**.
 
-Each tab begins with instructions for its controls and available actions. The
-dataset view uses **Berechnung für Datensätze** in German; Explore explains how
-to vary inputs graphically and points to Single case or Dataset for calculations
-on specific cases.
-
 The language setting is local to each Shiny session. It translates headings,
-controls, choices, validation messages, result summaries, plot labels and
-accessibility text. It does not translate uploaded values, IDs, column names or
-filenames, or alter their mappings. A new session starts in English.
+controls, validation messages, results and plots. It does not translate uploaded
+values, IDs, column names or filenames, or alter their mappings. A new session
+starts in English.
+
+Results and downloads require the current inputs and settings to match a saved
+calculation. Edits hide results while they differ; reverting those edits can
+restore access to the existing calculation. Replacing an upload requires
+recalculation. Language changes do not affect this check.
 
 Displayed probabilities use one decimal place, with a decimal point in English
 and a decimal comma in German. The two-year probability covers both years
@@ -157,8 +140,7 @@ numbers are not required.
 
 ## Standalone R API
 
-The scoring core has no package dependencies. Its comments, labels and error
-messages are English by default; German terminology is available as data in
+The scoring core uses base R. German terminology is available as data in
 `ogrs_items_de` and `ogrs_offences$german`.
 
 ```r
@@ -168,8 +150,10 @@ ogrs(Item1 = "m", Item2 = 20, Item3 = 20, Item4 = 0,
 # Prob_one_year = 0.1216155350; Prob_two_years = 0.2213052114
 # Copas_rate = -2.302585093
 
-issues <- validate_ogrs(my_data)
-scores <- ogrs(Data = my_data, strict = FALSE)
+data <- data.frame(Item1 = "m", Item2 = 20, Item3 = 20, Item4 = 0,
+                   Item5 = 20, Item6 = "Violence")
+issues <- validate_ogrs(data)
+scores <- ogrs(Data = data, strict = FALSE)
 attr(scores, "validation")
 ```
 
@@ -182,48 +166,27 @@ An empty, correctly structured data frame returns an empty result table.
 categorical item. Dataset columns are identified by name rather than position.
 `Data = NA` has been replaced with `Data = NULL`. The former app-internal
 `Shiny_Progress` argument has been removed; the vectorised core is independent
-of Shiny. The interim German export headers have been replaced by the stable
-English schema above.
+of Shiny. Exports use the stable English schema above.
 
 ## Development and testing
+
+Run the R regression suite from the repository root:
 
 ```sh
 Rscript tests/run.R
 ```
 
-The suite checks 1,840 independently calculated reference cases, every age
-boundary and offence category, validation, empty data, supported imports,
-SPSS value labels, IDs, export status, stale-download guards and Explore.
-Language tests verify German manual terminology, English defaults, session
-isolation and unchanged scoring state when switching languages.
-
-Optional browser checks:
-
-```sh
-python3 -m pip install -r tests/requirements-browser.txt
-python3 -m playwright install chromium
-python3 tests/browser_smoke.py
-```
-
-The browser test starts its own local Shiny server and uses synthetic data only.
-`OGRS_RSCRIPT` selects an Rscript executable; `CHROMIUM_PATH` can select an
-installed Chromium browser. Checks cover English and German, switching with
-existing results and custom mappings, upload/export, invalidation, plots and
-mobile layout, including selection prompts and the readability of mapping
-controls in both languages. GitHub Actions runs the R and browser suites.
-
-Translation strings live in `R/translations.json` with English source keys.
-`R/i18n.R` marks application-authored text; `www/i18n.js` updates marked text
-and select labels without replacing input widgets. Dynamic summaries and plots
-use the session's language on the server. Mapping widgets are deliberately
-independent of the language reactive, and language is excluded from calculation
-specifications. Raw uploaded values must never be marked for translation.
-
-Declare dependencies in `DESCRIPTION`, test changes, then run
-`renv::snapshot(type = "explicit", dev = TRUE)`. Do not regenerate reference
-expectations from the scoring implementation under test.
+The suite covers independent scoring references, validation, imports, exports,
+session state and translations. Browser tests exercise calculations, uploads,
+downloads and responsive layouts in both languages. See
+[Validation](docs/VALIDATION.md) for coverage and limitations, and
+[Contributing](CONTRIBUTING.md) for test setup and development guidance.
 
 ## Method, operation and licensing
+
+Calculations and uploads are processed **on the server**. Read
+[Data processing and deployment](docs/DATA_AND_DEPLOYMENT.md) for temporary-file
+handling, hosting requirements and deployment-specific privacy information.
 
 - [Model, sources and documented Excel discrepancy](docs/MODEL_AND_SOURCES.md)
 - [Data processing and deployment-specific requirements](docs/DATA_AND_DEPLOYMENT.md)
@@ -234,20 +197,15 @@ age 20. This app retains the original bands **18–20** and **21–24**. Switchi
 the display language does not change this source decision or recalibrate the
 model. Absolute probabilities are not newly calibrated German norms.
 
-The existing `rsconnect` target is retained. Setup and tests do not publish the
-app. Before a live deployment, complete the privacy information for the actual
-operator and hosting arrangements; the app does not invent contact details,
-contracts or deletion guarantees.
+Application code is under the [MIT license](LICENSE), Merten Neumann.
+The license does not grant rights to the cited manuals, instruments or other
+published source material.
 
-Application code is under the [MIT license](LICENSE), Merten Neumann. This does
-not grant rights to the cited publications or external Excel tool. Technical
-feedback, feature requests and suggestions for additions are welcome via
-[GitHub Issues](https://github.com/MertenNeumann/OGRS_Calculator/issues), without
-personal information or original datasets. The separate
-[VRAG-R calculator](https://mertenneumann.shinyapps.io/VRAGR_Calculator/) and its
-[source code](https://github.com/MertenNeumann/VRAGR_Calculator) are linked from
-the app's About tab.
+Report bugs, feature requests and suggestions through
+[GitHub Issues](https://github.com/MertenNeumann/OGRS_Calculator/issues), using
+synthetic examples rather than personal information or original case records.
+The separate [VRAG-R calculator](https://mertenneumann.shinyapps.io/VRAGR_Calculator/)
+and its [source code](https://github.com/MertenNeumann/VRAGR_Calculator) are also available.
 
-The About tab also includes an AI-assisted development disclosure. OpenAI Codex
-assisted with revising the code, interface, documentation and software tests.
-Case calculations use the documented R code; no AI model is used to score cases.
+OpenAI Codex assisted with code, interface, documentation and tests. Case
+calculations use the documented R code; no AI model is used to score cases.

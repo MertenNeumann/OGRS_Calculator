@@ -7,16 +7,16 @@ read_ogrs_file <- function(path, format = "auto", filename = basename(path), she
     format <- switch(extension, xlsx = "xlsx", sav = "sav", csv = "delimited", txt = "delimited", "")
   }
   data <- switch(format,
-    xlsx = readxl::read_excel(path, sheet = sheet, .name_repair = "minimal"),
-    sav = haven::read_sav(path),
+    xlsx = readxl::read_excel(path, sheet = sheet, .name_repair = "minimal", n_max = 100001L),
+    sav = haven::read_sav(path, n_max = 100001L),
     csv = readr::read_delim(path, delim = ",", col_types = readr::cols(.default = "c"),
-      name_repair = "minimal", show_col_types = FALSE, progress = FALSE, skip_empty_rows = FALSE),
+      name_repair = "minimal", show_col_types = FALSE, progress = FALSE, skip_empty_rows = FALSE, na = "", trim_ws = FALSE, n_max = 100001L),
     csv2 = readr::read_delim(path, delim = ";", col_types = readr::cols(.default = "c"),
-      name_repair = "minimal", show_col_types = FALSE, progress = FALSE, skip_empty_rows = FALSE),
+      name_repair = "minimal", show_col_types = FALSE, progress = FALSE, skip_empty_rows = FALSE, na = "", trim_ws = FALSE, n_max = 100001L),
     txt = readr::read_delim(path, delim = "\t", col_types = readr::cols(.default = "c"),
-      name_repair = "minimal", show_col_types = FALSE, progress = FALSE, skip_empty_rows = FALSE),
+      name_repair = "minimal", show_col_types = FALSE, progress = FALSE, skip_empty_rows = FALSE, na = "", trim_ws = FALSE, n_max = 100001L),
     delimited = readr::read_delim(path, delim = NULL, col_types = readr::cols(.default = "c"),
-      name_repair = "minimal", show_col_types = FALSE, progress = FALSE, skip_empty_rows = FALSE),
+      name_repair = "minimal", show_col_types = FALSE, progress = FALSE, skip_empty_rows = FALSE, na = "", trim_ws = FALSE, n_max = 100001L),
     stop("Supported formats are XLSX, CSV, TXT and SAV. Please select the file format.", call. = FALSE)
   )
   if (format %in% c("csv", "csv2", "txt", "delimited") && nrow(readr::problems(data))) {
@@ -62,6 +62,13 @@ default_category <- function(value, kind, labels = NULL) {
 }
 
 prepare_ogrs_data <- function(raw, columns, sex_map, offence_map, decimal_mark = ".") {
+  if (!is.null(names(columns))) {
+    if (length(columns) != length(ogrs_items) || anyDuplicated(names(columns)) ||
+        !setequal(names(columns), names(ogrs_items))) {
+      stop("Map each item to a distinct existing column.", call. = FALSE)
+    }
+    columns <- columns[names(ogrs_items)]
+  }
   if (length(columns) != 6L || any(!columns %in% names(raw)) || anyDuplicated(columns)) {
     stop("Map each item to a distinct existing column.", call. = FALSE)
   }
@@ -96,10 +103,13 @@ make_ogrs_export <- function(data, scores, issues, ids = NULL,
       stop("The optional case ID must be present and unique for every row.", call. = FALSE)
     }
   }
-  reasons <- vapply(seq_len(n), function(i) {
-    rows <- issues[issues$row == i, , drop = FALSE]
-    paste(paste0(unname(ogrs_items[rows$field]), ": ", rows$message), collapse = " | ")
-  }, character(1))
+  reasons <- rep("", n)
+  if (nrow(issues)) {
+    # Group once: rescanning every issue for each data row scales quadratically.
+    messages <- paste0(unname(ogrs_items[issues$field]), ": ", issues$message)
+    by_row <- split(messages, issues$row)
+    reasons[as.integer(names(by_row))] <- vapply(by_row, paste, character(1), collapse = " | ")
+  }
   data.frame(Row = seq_len(n), Case_ID = if (is.null(ids)) rep("", n) else ids,
     Status = ifelse(seq_len(n) %in% issues$row, "not_calculable", "calculated"),
     Error = reasons, Prob_one_year = scores$Prob_one_year, Prob_two_years = scores$Prob_two_years,

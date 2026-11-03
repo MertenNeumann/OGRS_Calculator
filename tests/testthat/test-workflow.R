@@ -25,6 +25,15 @@ test_that("import rejects empty, duplicate and missing columns", {
   expect_error(prepare_ogrs_data(valid_case(),rep("Item1",6),c(m="m"),c(Violence="Violence")),"distinct")
 })
 
+test_that("bounded SPSS reads enforce the row limit without truncating valid files", {
+  path <- tempfile(fileext = ".sav")
+  raw <- valid_case()[rep(1L, 100001L), ]
+  haven::write_sav(raw, path)
+  expect_error(read_ogrs_file(path, "sav"), "100,000")
+  haven::write_sav(raw[-nrow(raw), ], path)
+  expect_identical(nrow(read_ogrs_file(path, "sav")), 100000L)
+})
+
 test_that("SPSS value labels and leading zeroes in CSV IDs remain usable", {
   raw <- rbind(valid_case(),valid_case(Item1="f",Item2=35,Item3=35,Item4=3,Item5=18,Item6="Robbery"))
   raw$Item1 <- haven::labelled(c(1,2), c(Männlich=1,Weiblich=2))
@@ -39,6 +48,35 @@ test_that("SPSS value labels and leading zeroes in CSV IDs remain usable", {
   csv <- tempfile(fileext=".csv")
   writeLines("Case_ID,Item1,Item2,Item3,Item4,Item5,Item6\n001,m,20,20,0,20,Violence",csv)
   expect_identical(read_ogrs_file(csv,"csv")$Case_ID,"001")
+})
+
+test_that("named item mappings follow item names rather than their order", {
+  raw <- valid_case()
+  columns <- setNames(names(raw), names(ogrs_items))
+  expect_identical(
+    prepare_ogrs_data(raw, rev(columns), c(m = "m"), c(Violence = "Violence")),
+    prepare_ogrs_data(raw, unname(columns), c(m = "m"), c(Violence = "Violence"))
+  )
+  names(columns)[1] <- "Unknown"
+  expect_error(prepare_ogrs_data(raw, columns, c(m = "m"), c(Violence = "Violence")), "distinct")
+})
+
+test_that("delimited imports preserve literal NA identifiers and raw text", {
+  raw <- rbind(valid_case(), valid_case())
+  raw$Case_ID <- c("NA", "001")
+  raw$Item1 <- c(" m ", "m")
+  for (format in c("csv", "csv2", "txt")) {
+    path <- tempfile(fileext = if (format == "txt") ".txt" else ".csv")
+    delimiter <- switch(format, csv = ",", csv2 = ";", txt = "\t")
+    readr::write_delim(raw, path, delim = delimiter)
+    imported <- read_ogrs_file(path, format)
+    expect_identical(imported$Case_ID, c("NA", "001"))
+    expect_identical(imported$Item1, c(" m ", "m"))
+    mapped <- prepare_ogrs_data(imported, names(ogrs_items), c(m = "m"), c(Violence = "Violence"))
+    export <- make_ogrs_export(mapped, ogrs(Data = mapped), validate_ogrs(mapped), ids = imported$Case_ID)
+    expect_identical(export$Case_ID, c("NA", "001"))
+    expect_true(all(export$Status == "calculated"))
+  }
 })
 
 test_that("unknown categories and decimal values produce explicit validation issues", {
@@ -75,6 +113,25 @@ test_that("download filenames match the calculation's UTC metadata", {
   expect_identical(ogrs_export_filename("Single_case", timestamp), "OGRS3_Single_case_2026-10-31_14-30-45_UTC.csv")
   expect_identical(ogrs_export_filename("Results", timestamp), "OGRS3_Results_2026-10-31_14-30-45_UTC.csv")
   expect_identical(ogrs_export_filename("Example_data", timestamp), "OGRS3_Example_data_2026-10-31_14-30-45_UTC.csv")
+})
+
+test_that("large exports retain every row and its ordered validation messages", {
+  data <- valid_case()[rep(1L, 100000L), ]
+  data$Item4[seq.int(2L, nrow(data), by = 2L)] <- -1
+  data$Item5[2] <- 25
+  issues <- validate_ogrs(data)
+  result <- make_ogrs_export(data, ogrs(Data = data, strict = FALSE), issues)
+  expect_identical(result$Row, seq_len(nrow(data)))
+  expect_identical(sum(result$Status == "not_calculable"), 50000L)
+  expect_identical(result$Error[1], "")
+  expect_identical(result$Error[2], paste(
+    "Number of previous convictions: The number of previous convictions must not be negative.",
+    "Age at the first conviction: The first conviction must not be later than the current conviction.",
+    sep = " | "
+  ))
+  expect_identical(result$Error[100000], "Number of previous convictions: The number of previous convictions must not be negative.")
+  expect_true(all(is.na(result$Prob_one_year[result$Status == "not_calculable"])))
+  expect_true(all(is.finite(result$Prob_one_year[result$Status == "calculated"])))
 })
 
 test_that("Explore excludes invalid combinations and handles empty selections", {

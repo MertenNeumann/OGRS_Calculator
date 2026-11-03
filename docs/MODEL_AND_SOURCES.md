@@ -1,8 +1,8 @@
 # Model, coding and reference checks
 
-Technical revision: 31 October 2026. Model: OGRS 3. This revision does not
-re-estimate or recalibrate coefficients, or upgrade the instrument to OGRS 4.
-English and German interfaces share the same German coding and calculations.
+The calculator implements OGRS 3 using the German coding and the original
+coefficients. English and German interfaces share the same calculations.
+The model has not been re-estimated or recalibrated for this application.
 
 ## Authoritative sources
 
@@ -64,8 +64,8 @@ The published 2022 Excel tool is not a completely consistent numerical reference
    1.251124464 listed in the coefficient table. The app uses the full original
    coefficient; this rounding discrepancy is very small.
 
-These differences are documented rather than resolved by changing the model to
-match the spreadsheet. No message has been sent to the source authors.
+The implementation follows the original report where these numerical
+discrepancies occur.
 
 ## Interpretation
 

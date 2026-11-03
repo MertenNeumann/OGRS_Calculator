@@ -1,5 +1,5 @@
 # Run from the repository root: Rscript tests/run.R
-if (!file.exists("OGRS_Calculator.R")) stop("Please run from the repository root.")
+if (!file.exists("OGRS_Calculator.R")) stop("Run from the repository root.")
 required <- c("testthat", "shiny", "bslib", "ggplot2", "haven", "readxl", "readr", "digest")
 if (!all(vapply(required, requireNamespace, logical(1), quietly = TRUE))) {
   stop("Test dependencies are missing. Run scripts/setup.R first.")
@@ -7,5 +7,6 @@ if (!all(vapply(required, requireNamespace, logical(1), quietly = TRUE))) {
 results <- testthat::test_dir("tests/testthat", reporter = "summary", stop_on_failure = TRUE,
                              stop_on_warning = TRUE)
 summary <- as.data.frame(results)
+if (!nrow(summary) || !sum(summary$passed)) stop("No assertions were run.")
 if (any(summary$skipped)) stop("Required checks were skipped.")
 cat("Tests:", nrow(summary), "· Assertions:", sum(summary$passed), "· no skipped checks\n")

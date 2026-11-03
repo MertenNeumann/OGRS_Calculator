@@ -1,19 +1,32 @@
-# Change history
+# Changelog
 
-## 2.1.4 · Unreleased · 31 October 2026
+## Unreleased
+
+- Fix named column mappings so field names determine assignment even when a
+  mapping vector is reordered; reject incomplete or duplicate field names.
+- Keep page titles as plain text during UI localisation.
+- Group row-level export errors once to handle large invalid datasets efficiently.
+- Preserve literal `NA` identifiers and raw text in delimited imports, and bound
+  import reads to detect the documented row limit.
+- Restore dependencies into the actual project library and validate local server
+  settings consistently with the VRAG-R calculator.
+- Separate user and contributor documentation, align shared technical guidance,
+  and remove cloud-instance notes from public instructions.
+
+## 2.1.4 · 31 October 2026
 
 - Align the English/German Data processing section with the VRAG-R calculator:
   show concise server-processing, temporary-upload and hosting information
   directly, followed by the Posit security and compliance documentation link.
 
-## 2.1.3 · Unreleased · 31 October 2026
+## 2.1.3 · 31 October 2026
 
 - Add a short English/German AI-assisted development disclosure in About the
   app, matching the VRAG-R calculator. Credit OpenAI Codex for assistance with
   code, interface, documentation and tests, and clarify that case calculations
   use documented R code without an AI model.
 
-## 2.1.2 · Unreleased · 31 October 2026
+## 2.1.2 · 31 October 2026
 
 - Replace the short introductions in both languages with instructions for each
   tab's inputs, calculation, export and reference functions.
@@ -26,7 +39,7 @@
   selected columns and categories. Empty controls retain translated prompts.
 - Wrap long selected labels without overlapping the dropdown arrow.
 
-## 2.1.1 · Unreleased · 31 October 2026
+## 2.1.1 · 31 October 2026
 
 - Restore the original grey/white palette and blue accents, with grey histogram
   bars and a red density line. Add space between the brand subtitle and tabs.
@@ -41,7 +54,7 @@
 - Restore the VRAG-R calculator link and invite feature requests and suggestions
   for additions through GitHub Issues.
 
-## 2.1.0 · Unreleased · 31 October 2026
+## 2.1.0 · 31 October 2026
 
 ### Language
 
@@ -75,7 +88,7 @@
 - Documented age-20 discrepancy in the official German Excel tool.
 - R 4.6.2, current CRAN packages, renv lockfile, reference/regression/browser
   tests and GitHub Actions.
-- MIT license added with the author's approval. No automatic publication.
+- MIT license added.
 
 ### R API migration from the original calculator
 

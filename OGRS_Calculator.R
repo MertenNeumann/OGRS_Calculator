@@ -3,7 +3,7 @@
 # Model: Howard, Francis, Soothill & Humphreys (2009), appendix.
 # German coding: Breiling, Dahle, Oberlader & Rettenberger (2022), chapter 5.
 
-OGRS_APP_VERSION <- "2.1.4"
+OGRS_APP_VERSION <- "2.1.5"
 OGRS_MODEL_VERSION <- "OGRS 3 / German coding 2022 / model 2009"
 OGRS_MANUAL_URL <- "https://krimpub.krimz.de/files/223/bm-online30.pdf"
 
@@ -26,30 +26,27 @@ ogrs_items_de <- c(
 )
 
 # Stable API codes, original English labels and German manual terminology.
+.ogrs_offence_labels <- c("Violence", "Robbery", "Public order",
+    "Sexual (not against child)", "Sexual (against child)",
+    "Soliciting or prostitution", "Burglary (domestic)", "Burglary (other)", "Theft (non-motor)",
+    "Handling stolen goods", "Fraud and forgery", "Absconding or bail offences", "Taking & driving away and related offences",
+    "Theft from vehicles", "Other motoring", "Drink driving", "Criminal damage",
+    "Drug import/export/production", "Drug possession/supply", "Other offence")
+
 ogrs_offences <- data.frame(
   code = c("Violence", "Robbery", "Public_order", "Sexual_no_child", "Sexual_child",
     "Soliciting_Prostitution", "Burglary_domestic", "Burglary_other", "Theft_non_motor",
     "Handling_Stolen_Goods", "Fraud_Forgery", "Absconding_Bail_Offences", "Taking_Driving",
     "Theft_from_Vehicle", "Other_motoring", "Drink_Driving", "Criminal_Damage",
     "Drug_import_export_production", "Drug_possession_supply", "Other"),
-  label = c("Violence", "Robbery", "Public order",
-    "Sexual (not against child)", "Sexual (against child)",
-    "Soliciting or prostitution", "Burglary (domestic)", "Burglary (other)", "Theft (non-motor)",
-    "Handling stolen goods", "Fraud and forgery", "Absconding or bail offences", "Taking & driving away and related offences",
-    "Theft from vehicles", "Other motoring", "Drink driving", "Criminal damage",
-    "Drug import/export/production", "Drug possession/supply", "Other offence"),
+  label = .ogrs_offence_labels,
   german = c("Gewalt", "Raub", "Straftaten gegen die öffentliche Ordnung",
     "Sexualdelikte (Opfer ist kein Kind)", "Sexualdelikte (Opfer ist ein Kind)",
     "Zuhälterei / Prostitution", "Hausfriedensbruch", "Sonstige Einbrüche", "Diebstahl",
     "Hehlerei", "Betrug/Fälschung", "Flucht/Weisungsverstöße", "KFZ-Diebstahl",
     "KFZ-Aufbruch", "Verkehrsdelikte", "Trunkenheit am Steuer", "Sachbeschädigung",
     "Drogenhandel/-produktion", "Drogenbesitz", "Sonstige Delikte"),
-  english = c("Violence", "Robbery", "Public order", "Sexual (not against child)",
-    "Sexual (against child)", "Soliciting or prostitution", "Burglary (domestic)",
-    "Burglary (other)", "Theft (non-motor)", "Handling stolen goods", "Fraud and forgery",
-    "Absconding or bail offences", "Taking & driving away and related offences",
-    "Theft from vehicles", "Other motoring", "Drink driving", "Criminal damage",
-    "Drug import/export/production", "Drug possession/supply", "Other offence"),
+  english = .ogrs_offence_labels,
   weight = c(0, -0.634795912, 0.181917975, 0.003276327, -0.653434071,
     0.760608858, -0.123943520, 0.240604429, 0.661244321, 0.351866973,
     0.159910192, 0.733378677, 0.380059431, 0.427225615, 0.262228428,

@@ -24,3 +24,9 @@ test_that("translation markers distinguish authored text from uploaded values", 
   expect_identical(options$text, "Please select")
   expect_identical(english_manual_category("Sexualdelikt (Kind)"), "Sexual (against child)")
 })
+
+test_that("page titles remain plain text before browser translation", {
+  title <- htmltools::tags$title("OGRS 3 · Reoffending estimates")
+  expect_identical(localize_ui(title), title)
+  expect_identical(localize_ui(title, "de"), title)
+})

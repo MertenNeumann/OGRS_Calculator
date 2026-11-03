@@ -492,6 +492,6 @@ server <- function(input, output, session) {
   }, rownames = FALSE, colnames = TRUE)
 }
 
-# Local null fallback, independent of internal Shiny operators.
+# Empty selections remain empty; the fallback applies only to NULL.
 `%||%` <- function(x, y) if (is.null(x)) y else x
 shinyApp(ui = localize_ui(ui), server = server)

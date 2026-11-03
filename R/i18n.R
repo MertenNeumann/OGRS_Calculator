@@ -30,7 +30,8 @@ localize_ui <- function(node, language = "en") {
   }
   if (inherits(node, "shiny.tag")) {
     if (!is.null(node$attribs[["data-i18n-raw"]]) || !is.null(node$attribs[["data-i18n"]])) return(node)
-    if (node$name %in% c("script", "style", "option", "textarea", "code", "pre")) return(node)
+    # The title accepts plain text only; i18n.js translates document.title.
+    if (node$name %in% c("title", "script", "style", "option", "textarea", "code", "pre")) return(node)
     for (attribute in c("placeholder", "title", "aria-label")) {
       text <- node$attribs[[attribute]]
       if (is.character(text) && length(text) == 1L && text %in% names(.translation_catalog)) {
