@@ -12,8 +12,8 @@ results. German item names and terminology follow the
 
 The language selector changes presentation only. Both languages use the same
 convictions-only German coding, not different British and German models.
-OGRS 3 complements an individual risk assessment; it is not a specific prediction
-of violent or sexual reoffending. The manual remains the full coding reference.
+OGRS 3 is not a specific prediction of violent or sexual reoffending.
+The manual remains the full coding reference.
 
 ## Installation and startup
 

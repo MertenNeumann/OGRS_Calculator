@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Shorten the requested interpretation text in both interface languages.
 - Add `sim_ogrs_data()` and `sim_ogrs_case()` for reproducible illustrative
   inputs, with coherent chronology, optional missingness and explicit environment
   assignment. Validate simulation arguments and empty output schemas.

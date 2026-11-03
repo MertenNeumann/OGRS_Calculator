@@ -18,7 +18,6 @@ intro <- function(kicker, title, text) div(class = "section-intro",
 interpretation_note <- function() notice(
   tags$strong("What is estimated? "),
   "General reoffending within one or two years from the start of the at-risk period. ",
-  "The group-based estimate complements an individual assessment. ",
   manual_link("Interpretation and limitations in the manual", 18))
 item_hint <- function(...) div(class = "item-hint", ...)
 csv_export_note <- function(batch = FALSE) p(class = "item-hint csv-export-note",
@@ -137,11 +136,11 @@ ui <- page_navbar(
     layout_columns(col_widths = c(7, 5),
       card(card_header(h2("What OGRS 3 estimates")),
         p("OGRS 3 uses just six static factors to estimate the statistical risk of general reoffending within one or two years. It can help inform an individual assessment, but should not be used as the sole source of information."),
-        p("The German version concerns reoffending resulting in a further final conviction. Administrative offences are excluded. Item 3 defines the start of the at-risk period."),
+        p("The German version concerns reoffending resulting in a further final conviction. Administrative offences are excluded."),
         tags$ul(tags$li("No specific prediction of sexual or violent reoffending, or of the severity of a future offence."),
           tags$li("Unrecorded offences are not covered."),
           tags$li("Treatment progress and changes in dynamic risk factors are not captured."),
-          tags$li("The German version published in 2022 did not recalibrate the British coefficients. Discrimination and the accuracy of absolute probabilities are different properties."),
+          tags$li("The German version published in 2022 did not recalibrate the British coefficients."),
           tags$li("All six items are required. The model only provides male and female categories; a missing or inapplicable category is not replaced with an assumption.")),
         manual_link("Full application, coding and limitation guidance in the manual", 10)),
       card(card_header(h2("Model and sources")),

@@ -77,9 +77,9 @@ re-estimated using German data.
 Both probabilities are cumulative from the start of the at-risk period. They
 are not predictions of specifically violent or sexual reoffending or of the
 severity of a future offence. Unrecorded offences, dynamic changes and treatment
-progress are not captured. OGRS 3 complements an individual assessment. Good AUC
-values alone do not demonstrate calibration of absolute probabilities. Chapter 6
-of the German manual (pp. 19–20) expressly notes the absence of recalibration
+progress are not captured. Good AUC values alone do not demonstrate calibration
+of absolute probabilities. Chapter 6 of the German manual (pp. 19–20)
+expressly notes the absence of recalibration
 using German samples.
 
 The interface rounds probabilities to one decimal place using the selected
