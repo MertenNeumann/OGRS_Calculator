@@ -168,6 +168,31 @@ categorical item. Dataset columns are identified by name rather than position.
 `Shiny_Progress` argument has been removed; the vectorised core is independent
 of Shiny. Exports use the stable English schema above.
 
+## Simulated data
+
+```r
+source("OGRS_Calculator.R")
+set.seed(123)
+data <- sim_ogrs_data(100, prob_missing = 0)
+scores <- ogrs(Data = data)
+case <- sim_ogrs_case()
+```
+
+`sim_ogrs_data(N, prob_missing = 0.1)` returns
+`N` rows in the scoring input schema. Complete cases use canonical sex/offence
+codes and consistent ages; cases with no previous convictions have the same
+age at first and current conviction. `sim_ogrs_case(prob_missing = 0, envir = NULL)`
+returns one row without assigning global variables. Pass an environment explicitly
+to assign the six item bindings there.
+
+The dataset helper accepts nonnegative whole-number row counts, including zero.
+Both helpers accept missingness probabilities between 0 and 1, applied independently
+to each input field. Use `prob_missing = 0` for fully scoreable cases; otherwise
+use the non-strict scoring mode to retain rows with insufficient information.
+The functions use R's current random-number generator; call `set.seed()` externally
+for reproducibility. Their illustrative distributions are not calibrated to a
+real population and must not be used as independent scoring references.
+
 ## Development and testing
 
 Run the R regression suite from the repository root:

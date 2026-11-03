@@ -3,7 +3,7 @@
 # Model: Howard, Francis, Soothill & Humphreys (2009), appendix.
 # German coding: Breiling, Dahle, Oberlader & Rettenberger (2022), chapter 5.
 
-OGRS_APP_VERSION <- "2.1.5"
+OGRS_APP_VERSION <- "2.1.6"
 OGRS_MODEL_VERSION <- "OGRS 3 / German coding 2022 / model 2009"
 OGRS_MANUAL_URL <- "https://krimpub.krimz.de/files/223/bm-online30.pdf"
 
@@ -163,4 +163,53 @@ ogrs <- function(Data = NULL, Item1 = NULL, Item2 = NULL, Item3 = NULL,
     return(out)
   }
   result
+}
+
+# Generate illustrative inputs for examples and software tests. These arbitrary
+# distributions are not a calibrated population or independent scoring reference.
+# Use set.seed() before calling to reproduce a dataset; no seed is set internally.
+sim_ogrs_data <- function(N, prob_missing = 0.1) {
+  numeric_scalar <- function(x) {
+    typeof(x) %in% c("integer", "double") && !is.object(x) &&
+      is.null(dim(x)) && length(x) == 1L && is.finite(x)
+  }
+  if (!numeric_scalar(N) || N < 0 || N != floor(N) || N > .Machine$integer.max) {
+    stop("N must be a non-negative whole number no greater than .Machine$integer.max.", call. = FALSE)
+  }
+  if (!numeric_scalar(prob_missing) || prob_missing < 0 || prob_missing > 1) {
+    stop("prob_missing must be a finite number between 0 and 1.", call. = FALSE)
+  }
+  N <- as.integer(N)
+  current_age <- sample.int(81L, N, replace = TRUE) + 9L
+  previous_convictions <- stats::rnbinom(N, size = 2, mu = 2)
+  first_age <- 10L + floor(stats::runif(N) * (current_age - 9L))
+  first_age[previous_convictions == 0] <- current_age[previous_convictions == 0]
+  data <- data.frame(
+    Item1 = sample(c("m", "f"), N, replace = TRUE),
+    Item2 = current_age,
+    Item3 = pmin(120L, current_age + stats::rpois(N, lambda = 2)),
+    Item4 = previous_convictions,
+    Item5 = first_age,
+    Item6 = sample(ogrs_offences$code, N, replace = TRUE),
+    stringsAsFactors = FALSE
+  )
+  # Mask fields after constructing valid rows so missingness introduces no
+  # contradictory chronology among the values that remain observed.
+  if (prob_missing > 0) {
+    for (field in names(data)) {
+      data[[field]][stats::runif(N) < prob_missing] <- NA
+    }
+  }
+  data
+}
+
+# Return one case without changing global variables. An explicitly supplied
+# environment receives the six item bindings for interactive scoring examples.
+sim_ogrs_case <- function(prob_missing = 0, envir = NULL) {
+  if (!is.null(envir) && !is.environment(envir)) {
+    stop("envir must be NULL or an environment.", call. = FALSE)
+  }
+  data <- sim_ogrs_data(1L, prob_missing = prob_missing)
+  if (!is.null(envir)) list2env(as.list(data), envir = envir)
+  data
 }

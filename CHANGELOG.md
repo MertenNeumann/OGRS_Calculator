@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add `sim_ogrs_data()` and `sim_ogrs_case()` for reproducible illustrative
+  inputs, with coherent chronology, optional missingness and explicit environment
+  assignment. Validate simulation arguments and empty output schemas.
 - Fix named column mappings so field names determine assignment even when a
   mapping vector is reordered; reject incomplete or duplicate field names.
 - Keep page titles as plain text during UI localisation.
