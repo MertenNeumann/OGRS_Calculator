@@ -1,7 +1,7 @@
 Package: OGRSCalculator
 Type: Project
 Title: Bilingual Shiny Calculator for the Offender Group Reconviction Scale 3
-Version: 2.1.7
+Version: 2.1.9
 Authors@R: person("Merten", "Neumann", role = c("aut", "cre"))
 Description: Scoring, input validation, dataset processing and visualisation
     of OGRS 3 using the German coding by Breiling et al. (2022) and model

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Update the EN/DE data-processing text and provider links for Connect Cloud,
+  clarify logging and non-identifiable inputs, and use neutral row-ID wording.
+- Start Explore with two previous convictions and at-risk age 30 so the current-
+  conviction-age axis has a valid range; explain the fixed-age constraints.
 - Shorten the requested interpretation text in both interface languages.
 - Add `sim_ogrs_data()` and `sim_ogrs_case()` for reproducible illustrative
   inputs, with coherent chronology, optional missingness and explicit environment

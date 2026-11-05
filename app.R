@@ -80,7 +80,7 @@ ui <- page_navbar(
     intro("DATASET CALCULATION", "From a dataset to checked results.",
       "Upload a dataset, assign its columns to the six OGRS 3 items and check the mappings for sex and principal offence. Review the data checks, calculate the results and download them as CSV. An example dataset is available below."),
     notice(tags$strong("Minimise the data you upload. "),
-      "Upload only the required items and, if needed, a pseudonymous case ID. Names, dates of birth and case reference numbers are not required."),
+      "Use only data that cannot be linked to an individual. Upload only the required inputs and, if needed, a row ID. Names, dates of birth and case reference numbers are not needed."),
     layout_columns(col_widths = c(5, 7),
       card(card_header(h2("1 · Choose a file")),
         fileInput("batch_file", "Upload dataset (maximum 10 MiB)",
@@ -123,8 +123,10 @@ ui <- page_navbar(
         checkboxGroupInput("explore_sexes", "Sex (select at least one)", choices = c("Male" = "m", "Female" = "f"), selected = "m"),
         i18n_selectize_input("explore_offences", "Principal current offence (one to five groups)", choices = choice_offences,
           selected = "Violence", multiple = TRUE, options = list(maxItems = 5, plugins = list("remove_button"))),
-        number_item("explore_age_last", "Item2", 20), number_item("explore_age_risk", "Item3", 20),
-        number_item("explore_previous", "Item4", 0), number_item("explore_age_first", "Item5", 20),
+        number_item("explore_age_last", "Item2", 20), number_item("explore_age_risk", "Item3", 30),
+        number_item("explore_previous", "Item4", 2),
+        item_hint(id = "explore_previous_hint", "With 0 previous convictions, only one current-conviction age is valid. To explore an age range, use a positive count and keep the first-conviction age below the age at the start of the at-risk period."),
+        number_item("explore_age_first", "Item5", 20),
         item_hint("The selected axis value replaces the corresponding fixed input. Invalid combinations are excluded.")),
       card(card_header(h2("Model estimates")), uiOutput("explore_status"),
         plotOutput("explore_plot", height = "520px"),
@@ -174,10 +176,11 @@ ui <- page_navbar(
         p(tags$a("VRAG-R source code", href = "https://github.com/MertenNeumann/VRAGR_Calculator", target = "_blank", rel = "noopener noreferrer")))
     ),
     card(card_header(h2("Data processing")),
-      p("Calculations and uploads run on the server. The application code does not create a permanent case database or log case details. Inputs and files remain available for processing during the session."),
-      p("Temporary uploads are removed on replacement and recognised session end where the server can execute cleanup. Disconnects, crashes, hosting logs and backups have separate limits; immediate or complete deletion is not guaranteed."),
-      p("For shinyapps.io, Posit documents hosting on AWS in us-east-1 (USA)."),
-      p(tags$a("Posit security and compliance documentation", href = "https://docs.posit.co/shinyapps.io/guide/security_and_compliance/index.html", target = "_blank", rel = "noopener noreferrer"))),
+      p("Calculations and uploads are processed on the server. The app does not create a permanent case database. Technical warnings and error messages may contain uploaded values and be recorded in server logs."),
+      p("Use only data that cannot be linked to an individual. Replacing names with case IDs does not necessarily make data anonymous."),
+      p("The app removes recorded temporary upload files on replacement and recognised session end when cleanup can run. Hosting logs, backups and downloaded copies have separate retention and deletion arrangements."),
+      p("For Posit Connect Cloud, Posit documents hosting on AWS in us-east-2 (USA)."),
+      p(tags$a("Posit Connect Cloud security documentation", href = "https://docs.posit.co/connect-cloud/user/platform/security.html", target = "_blank", rel = "noopener noreferrer"), " · ", tags$a("Posit privacy policy", href = "https://posit.co/about/privacy-policy/", target = "_blank", rel = "noopener noreferrer"), " · ", tags$a("Posit service terms", href = "https://posit.co/about/posit-service-terms-of-use/", target = "_blank", rel = "noopener noreferrer"))),
     card(card_header(h2("AI-assisted development")),
       p("OpenAI Codex assisted with revising the code, interface, documentation and software tests. The app calculates results using the documented R code; no AI model is used to score cases."))
   ),
@@ -306,7 +309,7 @@ server <- function(input, output, session) {
       i18n_select_input(paste0("column_", i), paste0("Item ", i, " · ", ogrs_items[i]), choices, selected)
     })
     tagList(div(class = "form-grid", controls),
-      i18n_select_input("batch_id", "Optional pseudonymous case ID", choices = c("Use the sequential row number only" = "", names(data)), selected = ""))
+      i18n_select_input("batch_id", "Optional row ID", choices = c("Use the sequential row number only" = "", names(data)), selected = ""))
   })
   selected_columns <- reactive(vapply(seq_along(ogrs_items), function(i) input[[paste0("column_", i)]] %||% "", character(1)))
   mapping_values <- reactive({

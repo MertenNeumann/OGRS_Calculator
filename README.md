@@ -135,8 +135,8 @@ opening a CSV; import the ID column explicitly as text when necessary.
 
 The interface preview shows only the first rows and issues; the export includes
 all row-level error explanations. If no rows can be scored, calculation remains
-blocked. Only a suitable pseudonymous ID is needed; names and case reference
-numbers are not required.
+blocked. Use only data that cannot be linked to an individual; replacing names with
+case IDs does not by itself make data anonymous.
 
 ## Standalone R API
 
@@ -212,6 +212,8 @@ downloads and responsive layouts in both languages. See
 Calculations and uploads are processed **on the server**. Read
 [Data processing and deployment](docs/DATA_AND_DEPLOYMENT.md) for temporary-file
 handling, hosting requirements and deployment-specific privacy information.
+Use only data that cannot be linked to an individual; removing names or using
+row IDs does not by itself establish anonymity.
 
 - [Model, sources and documented Excel discrepancy](docs/MODEL_AND_SOURCES.md)
 - [Data processing and deployment-specific requirements](docs/DATA_AND_DEPLOYMENT.md)

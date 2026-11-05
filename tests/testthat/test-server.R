@@ -67,6 +67,33 @@ test_that("Explore explains empty selections without internal R errors", {
   })
 })
 
+test_that("Explore starts with an age range and preserves edited inputs", {
+  app <- load_app()
+  defaults <- function(id) {
+    input <- htmltools::tagQuery(app$ui)$find(paste0("#", id))$selectedTags()[[1]]
+    as.numeric(input$attribs$value)
+  }
+  expect_equal(defaults("explore_previous"), 2)
+  expect_equal(defaults("explore_age_risk"), 30)
+  shiny::testServer(app$server, {
+    session$setInputs(explore_axis = "Item2", explore_range = c(14, 90),
+      explore_sexes = "m", explore_offences = "Violence", explore_age_last = defaults("explore_age_last"),
+      explore_age_risk = defaults("explore_age_risk"), explore_previous = defaults("explore_previous"),
+      explore_age_first = defaults("explore_age_first"), explore_outcome = "Prob_one_year")
+    expect_equal(explored()$data$Item2, 20:30)
+    expect_type(output$explore_plot$src, "character")
+    session$setInputs(explore_previous = 0)
+    expect_equal(explored()$data$Item2, 20)
+    session$setInputs(language = "de", explore_axis = "Item4")
+    session$setInputs(explore_axis = "Item2", explore_range = c(14, 90))
+    expect_equal(input$explore_previous, 0)
+    expect_equal(explored()$data$Item2, 20)
+    session$setInputs(explore_previous = 4, explore_age_risk = 35, language = "en")
+    expect_equal(input$explore_previous, 4)
+    expect_equal(explored()$data$Item2, 20:35)
+  })
+})
+
 test_that("language changes preserve results, mappings and export validity", {
   app <- load_app()
   path <- tempfile(fileext = ".csv")
