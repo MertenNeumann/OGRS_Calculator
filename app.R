@@ -125,9 +125,9 @@ ui <- page_navbar(
           selected = "Violence", multiple = TRUE, options = list(maxItems = 5, plugins = list("remove_button"))),
         number_item("explore_age_last", "Item2", 20), number_item("explore_age_risk", "Item3", 30),
         number_item("explore_previous", "Item4", 2),
-        item_hint(id = "explore_previous_hint", "With 0 previous convictions, only one current-conviction age is valid. To explore an age range, use a positive count and keep the first-conviction age below the age at the start of the at-risk period."),
         number_item("explore_age_first", "Item5", 20),
-        item_hint("The selected axis value replaces the corresponding fixed input. Invalid combinations are excluded.")),
+        item_hint("The selected axis value replaces the corresponding fixed input. Invalid combinations are excluded."),
+        item_hint(id = "explore_previous_hint", "With 0 previous convictions, only one current-conviction age is valid. To explore an age range, use a positive count and keep the first-conviction age below the age at the start of the at-risk period.")),
       card(card_header(h2("Model estimates")), uiOutput("explore_status"),
         plotOutput("explore_plot", height = "520px"),
         p(class = "item-hint", "Only whole years and whole conviction counts are scored. Age-band effects are shown as steps.")))
