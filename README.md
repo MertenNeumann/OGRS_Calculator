@@ -232,5 +232,6 @@ synthetic examples rather than personal information or original case records.
 The separate [VRAG-R calculator](https://mertenneumann.shinyapps.io/VRAGR_Calculator/)
 and its [source code](https://github.com/MertenNeumann/VRAGR_Calculator) are also available.
 
-OpenAI Codex assisted with code, interface, documentation and tests. Case
-calculations use the documented R code; no AI model is used to score cases.
+[OpenAI Codex](https://github.com/codex) assisted with code, interface,
+documentation and tests. Case calculations use the documented R code; no AI
+model is used to score cases.
